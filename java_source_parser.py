@@ -54,7 +54,8 @@ class JavaSourceParser:
             #jqAssistant has a leading "/" for all paths
             relative_path = '/' + str(file_path.relative_to(self.project_path))
             # TODO: Assuming the source files are under /path-to/src. Should be removed in the future
-            relative_path = relative_path.split("/src", 1)[1]
+            if "/src" in relative_path:
+                relative_path = relative_path.split("/src", 1)[1]
 
             return {
                 "path": relative_path, 
