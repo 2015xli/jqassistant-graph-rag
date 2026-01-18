@@ -2,7 +2,16 @@ import os
 import logging
 from typing import List, Dict, Any
 from pathlib import Path
-import javalang # Assuming javalang is installed
+
+# Tree-sitter imports
+try:
+    from tree_sitter import Language, Parser
+    import tree_sitter_java
+    JAVA_LANGUAGE = Language(tree_sitter_java.language())
+    _parser = Parser(JAVA_LANGUAGE)
+except ImportError:
+    logging.getLogger(__name__).warning("tree-sitter-java not installed. Java parsing will be disabled.")
+    _parser = None
 
 logger = logging.getLogger(__name__)
 
@@ -11,6 +20,8 @@ class JavaSourceParser:
     Parses Java source files to extract metadata like package name and top-level classes.
     """
     def __init__(self, project_path: str):
+        if _parser is None:
+            raise ImportError("tree-sitter-java is required for Java parsing but not installed.")
         self.project_path = Path(project_path).resolve()
         if not self.project_path.is_dir():
             raise ValueError(f"Project path '{project_path}' is not a valid directory.")
@@ -18,59 +29,73 @@ class JavaSourceParser:
 
     def _get_java_file_metadata(self, file_path: Path) -> Dict[str, Any]:
         """
-        Parses a .java file and returns a dictionary with package and top-level classes.
-        This is based on the user's provided code.
+        Parses a .java file using tree-sitter and returns a dictionary with package and top-level types (FQNs).
         """
-        try:
-            with open(file_path, 'r', encoding='utf-8') as f:
-                content = f.read()
+        # jQAssistant paths usually start with a '/'
+        relative_path = '/' + str(file_path.relative_to(self.project_path))
+        # TODO: Assuming the source files are under /path-to/src. Should be removed in the future
+        if True: # User requested to keep this debug block
+            if "/src" in relative_path:
+                relative_path = relative_path.split("/src", 1)[1]
 
-            filename = file_path.name
-            is_special_type = filename in ["package-info.java", "module-info.java"]
+        try:
+            with open(file_path, "rb") as f: # Read as binary for tree-sitter
+                content = f.read()
+            
+            tree = _parser.parse(content)
+            root = tree.root_node
             
             package_name = ""
-            top_level_classes = []
-            fqns = [] # Fully Qualified Names
+            # Store (type_name, declaration_type) tuples to handle module_declaration FQN correctly
+            found_types_with_kind = [] 
 
-            if not is_special_type: # javalang might struggle with module-info.java
-                try:
-                    tree = javalang.parse.parse(content)
-                    
-                    # Extract Package Name
-                    if tree.package:
-                        package_name = tree.package.name
-                        
-                    # Extract Top-Level Classes (Name only, no package string)
-                    for t in tree.types:
-                        if isinstance(t, (javalang.tree.ClassDeclaration, javalang.tree.InterfaceDeclaration, javalang.tree.EnumDeclaration)):
-                            top_level_classes.append(t.name)
-                            fqns.append(f"{package_name}.{t.name}" if package_name else t.name)
-                    
-                except javalang.parser.JavaSyntaxError as e:
-                    logger.warning(f"Syntax error in {file_path}: {e}. Skipping detailed parsing.")
-                except Exception as e:
-                    logger.warning(f"Unexpected error parsing {file_path}: {e}. Skipping detailed parsing.")
+            # Iterate only through top-level children of the source_file
+            for child in root.children:
+                # 1. Find the Package Name
+                if child.type == "package_declaration":
+                    for node in child.children:
+                        if node.type == "scoped_identifier":
+                            package_name = node.text.decode("utf-8")
+                            break
+                
+                # 2. Find Top-Level Classes, Interfaces, Enums, Annotations, Records
+                elif child.type in ["class_declaration", "interface_declaration", "enum_declaration", "annotation_type_declaration", "record_declaration"]:
+                    name_node = child.child_by_field_name("name")
+                    if name_node:
+                        found_types_with_kind.append((name_node.text.decode("utf-8"), child.type))
+                
+                # 3. Handle module-info.java
+                elif child.type == "module_declaration":
+                    name_node = child.child_by_field_name("name")
+                    if name_node:
+                        found_types_with_kind.append((name_node.text.decode("utf-8"), child.type))
             
-            #jqAssistant has a leading "/" for all paths
-            relative_path = '/' + str(file_path.relative_to(self.project_path))
-            # TODO: Assuming the source files are under /path-to/src. Should be removed in the future
-            if False:
-                if "/src" in relative_path:
-                    relative_path = relative_path.split("/src", 1)[1]
+            # Build the full FQNs
+            fqns = []
+            prefix = f"{package_name}." if package_name else ""
+            
+            for type_name, kind in found_types_with_kind:
+                if kind == "module_declaration":
+                    # Module name is its FQN directly
+                    fqns.append(type_name)
+                else:
+                    fqns.append(f"{prefix}{type_name}")
+            
+            # Special handling for package-info.java: its FQN is just the package name
+            if file_path.name == "package-info.java" and package_name and package_name not in fqns:
+                fqns.append(package_name)
 
             return {
                 "path": relative_path, 
                 "package": package_name,
-                "fqns": fqns,
-                "is_special_type": is_special_type
+                "fqns": fqns
             }
         except Exception as e:
-            logger.error(f"Error reading or processing file {file_path}: {e}")
+            logger.error(f"Error reading or processing Java file {file_path}: {e}")
             return {
-                "path": str(file_path.relative_to(self.project_path)),
+                "path": relative_path,
                 "package": "",
                 "fqns": [],
-                "is_special_type": False,
                 "error": str(e)
             }
 
@@ -85,7 +110,7 @@ class JavaSourceParser:
                 if file_name.endswith(".java"):
                     file_path = Path(root) / file_name
                     metadata = self._get_java_file_metadata(file_path)
-                    if True: 
+                    if True: # User requested to keep this debug block
                         if file_name == "QuarkReportPanel.java":
                             logger.info(f"Metadata for {file_name}:\n {metadata}")
                     if metadata:

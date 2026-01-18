@@ -26,6 +26,8 @@ def main():
 
     # Initialize logging based on parsed arguments
     init_logging(args.log_level)
+    uri, user, password = args.uri, args.user, args.password
+    #uri, user, password = "bolt://localhost:7688", "neo4j", "neo4j"
 
     # Resolve project path
     project_path = Path(args.project_path).resolve()
@@ -43,15 +45,9 @@ def main():
         java_metadata = java_parser.parse_project()
         all_source_metadata.extend(java_metadata)
 
-        try:
-            kotlin_parser = KotlinSourceParser(str(project_path))
-            kotlin_metadata = kotlin_parser.parse_project()
-            all_source_metadata.extend(kotlin_metadata)
-        except ImportError as e:
-            logger.warning(f"Kotlin parsing skipped: {e}")
-        except Exception as e:
-            logger.error(f"Error during Kotlin parsing: {e}")
-
+        kotlin_parser = KotlinSourceParser(str(project_path))
+        kotlin_metadata = kotlin_parser.parse_project()
+        all_source_metadata.extend(kotlin_metadata)
 
         if not all_source_metadata:
             logger.warning("No Java or Kotlin source files found or parsed. Exiting.")
@@ -59,7 +55,7 @@ def main():
 
         # Step 2: Enrich Neo4j graph
         # Instantiate Neo4jManager and pass it to GraphEnricher
-        with Neo4jManager(uri=args.uri, user=args.user, password=args.password) as neo4j_mgr:
+        with Neo4jManager(uri=uri, user=user, password=password) as neo4j_mgr:
             enricher = GraphEnricher(neo4j_manager=neo4j_mgr) # Pass manager instance
             relationships_created = enricher.enrich_graph(all_source_metadata)
             logger.info(f"Successfully created {relationships_created} new [:WITH_SOURCE] relationships.") # Updated relationship name

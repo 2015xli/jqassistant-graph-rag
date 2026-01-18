@@ -4,8 +4,8 @@ import os
 def add_neo4j_args(parser: argparse.ArgumentParser):
     """Adds Neo4j connection arguments to the parser."""
     group = parser.add_argument_group("Neo4j Connection")
-    group.add_argument("--uri", default=os.getenv("NEO4J_URI", "bolt://localhost:7688"),
-                       help="Neo4j connection URI (default: bolt://localhost:7688 or NEO4J_URI env var)")
+    group.add_argument("--uri", default=os.getenv("NEO4J_URI", "bolt://localhost:7687"),
+                       help="Neo4j connection URI (default: bolt://localhost:7687 or NEO4J_URI env var)")
     group.add_argument("--user", default=os.getenv("NEO4J_USER", "neo4j"),
                        help="Neo4j username (default: neo4j or NEO4J_USER env var)")
     group.add_argument("--password", default=os.getenv("NEO4J_PASSWORD", "neo4j"),
