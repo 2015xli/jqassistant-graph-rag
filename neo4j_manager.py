@@ -20,7 +20,7 @@ class Neo4jManager:
         """Establishes connection and returns self for use in 'with' statements."""
         self._driver = GraphDatabase.driver(self.uri, auth=(self.user, self.password))
         self._driver.verify_connectivity() # Verify connection immediately
-        logger.info("Neo4j connection established.")
+        logger.info(f"Neo4j connection established at {self.uri} with user {self.user}.")
         return self
 
     def __exit__(self, exc_type, exc, tb):

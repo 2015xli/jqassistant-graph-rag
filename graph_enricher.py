@@ -31,14 +31,17 @@ class GraphEnricher: # Renamed class
         
         # The Cypher query to create relationships in batches
         # It matches the File node by its fileName (relative path)
-        # Then, for each FQN in the file_data, it matches the Type:Class node by its fqn property
+        # Then, for each FQN in the file_data, it matches the Type:[Class|Interface|Enum|Annotation|Record] node by its fqn property
         # Finally, it MERGEs the [:WITH_SOURCE] relationship (reversed direction)
+        # TODO: Package and Module are not Type. need extra processing.
+
         cypher_query = """
         UNWIND $metadata AS file_data
         MATCH (file:File {fileName: file_data.path})
-        UNWIND file_data.fqns AS class_fqn
-        MATCH (class:Type:Class {fqn: class_fqn})
-        MERGE (class)-[r:WITH_SOURCE]->(file)
+        UNWIND file_data.fqns AS type_fqn // Renamed for clarity
+        MATCH (type:Type {fqn: type_fqn})
+        WHERE type:Class|Interface|Enum|Annotation|Record
+        MERGE (type)-[r:WITH_SOURCE]->(file)
         RETURN count(r) AS relationships_created
         """
         total_relationships_created = 0
