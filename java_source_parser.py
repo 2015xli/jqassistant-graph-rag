@@ -51,12 +51,14 @@ class JavaSourceParser:
                 except Exception as e:
                     logger.warning(f"Unexpected error parsing {file_path}: {e}. Skipping detailed parsing.")
             
-            relative_path = str(file_path.relative_to(self.project_path))
+            #jqAssistant has a leading "/" for all paths
+            relative_path = '/' + str(file_path.relative_to(self.project_path))
+            # TODO: Assuming the source files are under /path-to/src. Should be removed in the future
+            relative_path = relative_path.split("/src", 1)[1]
 
             return {
-                "path": '/' + relative_path,  #jqAssistant has a leading "/" for all paths
+                "path": relative_path, 
                 "package": package_name,
-                "classes": top_level_classes,
                 "fqns": fqns,
                 "is_special_type": is_special_type
             }
@@ -65,7 +67,6 @@ class JavaSourceParser:
             return {
                 "path": str(file_path.relative_to(self.project_path)),
                 "package": "",
-                "classes": [],
                 "fqns": [],
                 "is_special_type": False,
                 "error": str(e)

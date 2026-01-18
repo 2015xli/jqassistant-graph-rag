@@ -27,7 +27,7 @@ class GraphEnricher: # Renamed class
             logger.warning("No source metadata provided for enrichment. Skipping.")
             return 0
 
-        logger.info(f"Starting graph enrichment for {len(source_metadata)} Java files.")
+        logger.info(f"Starting graph enrichment for {len(source_metadata)} source files.")
         
         # The Cypher query to create relationships in batches
         # It matches the File node by its fileName (relative path)

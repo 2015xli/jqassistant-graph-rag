@@ -6,15 +6,16 @@ from pathlib import Path
 # Import modules from the same directory
 from input_params import add_neo4j_args, add_project_path_args, add_logging_args
 from java_source_parser import JavaSourceParser
-from graph_enricher import GraphEnricher # Updated import
-from neo4j_manager import Neo4jManager # New import
-from log_manager import init_logging # Import the new init_logging
+from kotlin_source_parser import KotlinSourceParser # New import
+from graph_enricher import GraphEnricher
+from neo4j_manager import Neo4jManager
+from log_manager import init_logging
 
 logger = logging.getLogger(__name__) # Keep this for main.py's own logging
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Enrich a jQAssistant Neo4j graph by connecting Java source files to Type:Class nodes."
+        description="Enrich a jQAssistant Neo4j graph by connecting Java/Kotlin source files to Type:Class nodes." # Updated description
     )
 
     add_project_path_args(parser)
@@ -35,19 +36,32 @@ def main():
     logger.info(f"Starting jQAssistant Graph RAG enrichment for project: {project_path}")
 
     try:
-        # Step 1: Parse Java source files
-        java_parser = JavaSourceParser(str(project_path))
-        source_metadata = java_parser.parse_project()
+        # Step 1: Parse Java and Kotlin source files
+        all_source_metadata = []
 
-        if not source_metadata:
-            logger.warning("No Java source files found or parsed. Exiting.")
+        java_parser = JavaSourceParser(str(project_path))
+        java_metadata = java_parser.parse_project()
+        all_source_metadata.extend(java_metadata)
+
+        try:
+            kotlin_parser = KotlinSourceParser(str(project_path))
+            kotlin_metadata = kotlin_parser.parse_project()
+            all_source_metadata.extend(kotlin_metadata)
+        except ImportError as e:
+            logger.warning(f"Kotlin parsing skipped: {e}")
+        except Exception as e:
+            logger.error(f"Error during Kotlin parsing: {e}")
+
+
+        if not all_source_metadata:
+            logger.warning("No Java or Kotlin source files found or parsed. Exiting.")
             sys.exit(0)
 
         # Step 2: Enrich Neo4j graph
         # Instantiate Neo4jManager and pass it to GraphEnricher
         with Neo4jManager(uri=args.uri, user=args.user, password=args.password) as neo4j_mgr:
             enricher = GraphEnricher(neo4j_manager=neo4j_mgr) # Pass manager instance
-            relationships_created = enricher.enrich_graph(source_metadata)
+            relationships_created = enricher.enrich_graph(all_source_metadata)
             logger.info(f"Successfully created {relationships_created} new [:WITH_SOURCE] relationships.") # Updated relationship name
 
     except ValueError as e:
