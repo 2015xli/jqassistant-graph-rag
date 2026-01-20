@@ -40,7 +40,7 @@ class GraphEnricher: # Renamed class
         MATCH (file:File {fileName: file_data.path})
         UNWIND file_data.fqns AS type_fqn // Renamed for clarity
         MATCH (type:Type {fqn: type_fqn})
-        WHERE type:Class|Interface|Enum|Annotation|Record
+        WHERE type:Class OR type:Interface OR type:Enum
         MERGE (type)-[r:WITH_SOURCE]->(file)
         RETURN count(r) AS relationships_created
         """

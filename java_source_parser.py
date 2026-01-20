@@ -34,7 +34,7 @@ class JavaSourceParser:
         # jQAssistant paths usually start with a '/'
         relative_path = '/' + str(file_path.relative_to(self.project_path))
         # TODO: Assuming the source files are under /path-to/src. Should be removed in the future
-        if True: # User requested to keep this debug block
+        if False: # User requested to keep this debug block
             if "/src" in relative_path:
                 relative_path = relative_path.split("/src", 1)[1]
 

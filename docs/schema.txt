@@ -1,0 +1,178 @@
+2026-01-19 16:36:04,116 - [INFO] Logging initialized with console level: INFO
+2026-01-19 16:36:04,226 - [INFO] Neo4j connection established at bolt://localhost:7688 with user neo4j.
+2026-01-19 16:36:04,229 - [INFO] Initialized SchemaAnalyzer.
+2026-01-19 16:36:04,229 - [INFO] 
+--- Starting jQAssistant Schema Analysis ---
+2026-01-19 16:36:04,229 - [INFO] 
+Node Labels and Counts:
+2026-01-19 16:36:04,229 - [INFO] Listing node labels and counts...
+2026-01-19 16:36:04,664 - [INFO]   - Java: 5032
+2026-01-19 16:36:04,664 - [INFO]   - ByteCode: 4900
+2026-01-19 16:36:04,664 - [INFO]   - Member: 2518
+2026-01-19 16:36:04,664 - [INFO]   - Method: 1752
+2026-01-19 16:36:04,665 - [INFO]   - Parameter: 997
+2026-01-19 16:36:04,665 - [INFO]   - File: 815
+2026-01-19 16:36:04,665 - [INFO]   - Field: 766
+2026-01-19 16:36:04,665 - [INFO]   - Bound: 634
+2026-01-19 16:36:04,665 - [INFO]   - Type: 515
+2026-01-19 16:36:04,665 - [INFO]   - Value: 256
+2026-01-19 16:36:04,665 - [INFO]   - ParameterizedType: 244
+2026-01-19 16:36:04,665 - [INFO]   - Constructor: 234
+2026-01-19 16:36:04,665 - [INFO]   - Lambda: 230
+2026-01-19 16:36:04,665 - [INFO]   - Primitive: 140
+2026-01-19 16:36:04,665 - [INFO]   - Class: 126
+2026-01-19 16:36:04,665 - [INFO]   - Directory: 124
+2026-01-19 16:36:04,665 - [INFO]   - Package: 118
+2026-01-19 16:36:04,665 - [INFO]   - Annotation: 96
+2026-01-19 16:36:04,665 - [INFO]   - WildcardType: 20
+2026-01-19 16:36:04,665 - [INFO]   - Throwable: 16
+2026-01-19 16:36:04,665 - [INFO]   - Array: 16
+2026-01-19 16:36:04,665 - [INFO]   - GenericDeclaration: 10
+2026-01-19 16:36:04,665 - [INFO]   - TypeVariable: 10
+2026-01-19 16:36:04,665 - [INFO]   - ServiceLoader: 6
+2026-01-19 16:36:04,665 - [INFO]   - Enum: 6
+2026-01-19 16:36:04,665 - [INFO]   - Interface: 6
+2026-01-19 16:36:04,665 - [INFO]   - Artifact: 4
+2026-01-19 16:36:04,665 - [INFO]   - ManifestEntry: 4
+2026-01-19 16:36:04,665 - [INFO]   - Zip: 2
+2026-01-19 16:36:04,665 - [INFO]   - Archive: 2
+2026-01-19 16:36:04,665 - [INFO]   - Jar: 2
+2026-01-19 16:36:04,665 - [INFO]   - Manifest: 2
+2026-01-19 16:36:04,665 - [INFO]   - ManifestSection: 2
+2026-01-19 16:36:04,665 - [INFO]   - GenericArrayType: 2
+2026-01-19 16:36:04,665 - [INFO] 
+Relationship Types and Counts:
+2026-01-19 16:36:04,665 - [INFO] Listing relationship types and counts...
+2026-01-19 16:36:05,033 - [INFO]   - INVOKES: 4360
+2026-01-19 16:36:05,033 - [INFO]   - DECLARES: 2529
+2026-01-19 16:36:05,033 - [INFO]   - READS: 1810
+2026-01-19 16:36:05,033 - [INFO]   - DEPENDS_ON: 1792
+2026-01-19 16:36:05,033 - [INFO]   - OF_TYPE: 1645
+2026-01-19 16:36:05,033 - [INFO]   - RETURNS: 1192
+2026-01-19 16:36:05,033 - [INFO]   - HAS: 1059
+2026-01-19 16:36:05,033 - [INFO]   - CONTAINS: 966
+2026-01-19 16:36:05,033 - [INFO]   - OF_RAW_TYPE: 612
+2026-01-19 16:36:05,033 - [INFO]   - WRITES: 462
+2026-01-19 16:36:05,033 - [INFO]   - REQUIRES: 377
+2026-01-19 16:36:05,033 - [INFO]   - HAS_ACTUAL_TYPE_ARGUMENT: 268
+2026-01-19 16:36:05,033 - [INFO]   - OF_GENERIC_TYPE: 228
+2026-01-19 16:36:05,033 - [INFO]   - EXTENDS: 138
+2026-01-19 16:36:05,033 - [INFO]   - RETURNS_GENERIC: 120
+2026-01-19 16:36:05,033 - [INFO]   - ANNOTATED_BY: 96
+2026-01-19 16:36:05,033 - [INFO]   - CATCHES: 74
+2026-01-19 16:36:05,033 - [INFO]   - IMPLEMENTS: 72
+2026-01-19 16:36:05,033 - [INFO]   - THROWS: 70
+2026-01-19 16:36:05,034 - [INFO]   - HAS_UPPER_BOUND: 12
+2026-01-19 16:36:05,034 - [INFO]   - DECLARES_TYPE_PARAMETER: 10
+2026-01-19 16:36:05,034 - [INFO]   - EXTENDS_GENERIC: 8
+2026-01-19 16:36:05,034 - [INFO]   - HAS_COMPONENT_TYPE: 2
+2026-01-19 16:36:05,034 - [INFO] Inspecting properties for label 'File'...
+2026-01-19 16:36:05,199 - [INFO] 
+Properties for File:
+2026-01-19 16:36:05,199 - [INFO]   Distinct Keys: [{'keys(n)': ['fileName']}]
+2026-01-19 16:36:05,199 - [INFO]   Sample Nodes: [{'n': {'fileName': '/home/xli/Public/jadx/jadx-plugins/jadx-java-input'}}, {'n': {'fqn': 'build', 'fileName': '/build', 'name': 'build'}}, {'n': {'fileName': '/build/resources', 'fqn': 'build.resources', 'name': 'resources'}}, {'n': {'fileName': '/build/resources/main', 'fqn': 'build.resources.main', 'name': 'main'}}, {'n': {'fileName': '/build/resources/main/META-INF', 'fqn': 'build.resources.main.META-INF', 'name': 'META-INF'}}]
+2026-01-19 16:36:05,199 - [INFO] Inspecting properties for label 'Directory'...
+2026-01-19 16:36:05,276 - [INFO] 
+Properties for Directory:
+2026-01-19 16:36:05,276 - [INFO]   Distinct Keys: [{'keys(n)': ['fileName']}]
+2026-01-19 16:36:05,276 - [INFO]   Sample Nodes: [{'n': {'fileName': '/home/xli/Public/jadx/jadx-plugins/jadx-java-input'}}, {'n': {'fqn': 'build', 'fileName': '/build', 'name': 'build'}}, {'n': {'fileName': '/build/resources', 'fqn': 'build.resources', 'name': 'resources'}}, {'n': {'fileName': '/build/resources/main', 'fqn': 'build.resources.main', 'name': 'main'}}, {'n': {'fileName': '/build/resources/main/META-INF', 'fqn': 'build.resources.main.META-INF', 'name': 'META-INF'}}]
+2026-01-19 16:36:05,276 - [INFO] Inspecting properties for label 'Package'...
+2026-01-19 16:36:05,356 - [INFO] 
+Properties for Package:
+2026-01-19 16:36:05,357 - [INFO]   Distinct Keys: [{'keys(n)': ['fqn', 'name', 'fileName']}]
+2026-01-19 16:36:05,357 - [INFO]   Sample Nodes: [{'n': {'fqn': 'build', 'fileName': '/build', 'name': 'build'}}, {'n': {'fileName': '/build/resources', 'fqn': 'build.resources', 'name': 'resources'}}, {'n': {'fileName': '/build/resources/main', 'fqn': 'build.resources.main', 'name': 'main'}}, {'n': {'fileName': '/build/resources/main/META-INF', 'fqn': 'build.resources.main.META-INF', 'name': 'META-INF'}}, {'n': {'fqn': 'build.resources.main.META-INF.services', 'fileName': '/build/resources/main/META-INF/services', 'name': 'services'}}]
+2026-01-19 16:36:05,357 - [INFO] Inspecting properties for label 'Type'...
+2026-01-19 16:36:05,434 - [INFO] 
+Properties for Type:
+2026-01-19 16:36:05,434 - [INFO]   Distinct Keys: [{'keys(n)': ['fileName', 'name', 'fqn']}]
+2026-01-19 16:36:05,434 - [INFO]   Sample Nodes: [{'n': {'fileName': '/jadx/api/plugins/JadxPlugin.class', 'fqn': 'jadx.api.plugins.JadxPlugin', 'name': 'JadxPlugin'}}, {'n': {'fileName': '/jadx/plugins/input/java/JavaInputPlugin.class', 'fqn': 'jadx.plugins.input.java.JavaInputPlugin', 'name': 'JavaInputPlugin'}}, {'n': {'valid': True, 'sourceFileName': 'JavaClassReader.java', 'fqn': 'jadx.plugins.input.java.JavaClassReader', 'fileName': '/jadx/plugins/input/java/JavaClassReader.class', 'visibility': 'public', 'name': 'JavaClassReader', 'byteCodeVersion': 55}}, {'n': {'fileName': '/java/lang/Object.class', 'fqn': 'java.lang.Object', 'name': 'Object'}}, {'n': {'fqn': 'int', 'fileName': '/int.class', 'name': 'int'}}]
+2026-01-19 16:36:05,434 - [INFO] Inspecting properties for label 'Type:Class'...
+2026-01-19 16:36:05,521 - [INFO] 
+Properties for Type:Class:
+2026-01-19 16:36:05,521 - [INFO]   Distinct Keys: [{'keys(n)': ['visibility', 'sourceFileName', 'name', 'valid', 'fqn', 'byteCodeVersion', 'fileName']}]
+2026-01-19 16:36:05,521 - [INFO]   Sample Nodes: [{'n': {'valid': True, 'sourceFileName': 'JavaClassReader.java', 'fqn': 'jadx.plugins.input.java.JavaClassReader', 'fileName': '/jadx/plugins/input/java/JavaClassReader.class', 'visibility': 'public', 'name': 'JavaClassReader', 'byteCodeVersion': 55}}, {'n': {'valid': True, 'sourceFileName': 'JavaClassData.java', 'fileName': '/jadx/plugins/input/java/data/JavaClassData.class', 'fqn': 'jadx.plugins.input.java.data.JavaClassData', 'visibility': 'public', 'name': 'JavaClassData', 'byteCodeVersion': 55}}, {'n': {'valid': True, 'sourceFileName': 'JavaInputLoader.java', 'fqn': 'jadx.plugins.input.java.JavaInputLoader', 'fileName': '/jadx/plugins/input/java/JavaInputLoader.class', 'visibility': 'public', 'name': 'JavaInputLoader', 'byteCodeVersion': 55}}, {'n': {'valid': True, 'sourceFileName': 'JavaInputPlugin.java', 'fqn': 'jadx.plugins.input.java.JavaInputPlugin', 'fileName': '/jadx/plugins/input/java/JavaInputPlugin.class', 'visibility': 'public', 'name': 'JavaInputPlugin', 'byteCodeVersion': 55}}, {'n': {'valid': True, 'sourceFileName': 'JavaLoadResult.java', 'fileName': '/jadx/plugins/input/java/JavaLoadResult.class', 'fqn': 'jadx.plugins.input.java.JavaLoadResult', 'visibility': 'public', 'name': 'JavaLoadResult', 'byteCodeVersion': 55}}]
+2026-01-19 16:36:05,521 - [INFO] Inspecting properties for label 'Type:Interface'...
+2026-01-19 16:36:05,601 - [INFO] 
+Properties for Type:Interface:
+2026-01-19 16:36:05,601 - [INFO]   Distinct Keys: [{'keys(n)': ['sourceFileName', 'byteCodeVersion', 'fileName', 'visibility', 'valid', 'fqn', 'name']}]
+2026-01-19 16:36:05,601 - [INFO]   Sample Nodes: [{'n': {'valid': True, 'sourceFileName': 'IJavaAttribute.java', 'fileName': '/jadx/plugins/input/java/data/attributes/IJavaAttribute.class', 'fqn': 'jadx.plugins.input.java.data.attributes.IJavaAttribute', 'visibility': 'public', 'name': 'IJavaAttribute', 'byteCodeVersion': 55}}, {'n': {'valid': True, 'sourceFileName': 'IJavaAttributeReader.java', 'fqn': 'jadx.plugins.input.java.data.attributes.IJavaAttributeReader', 'fileName': '/jadx/plugins/input/java/data/attributes/IJavaAttributeReader.class', 'visibility': 'public', 'name': 'IJavaAttributeReader', 'byteCodeVersion': 55}}, {'n': {'valid': True, 'sourceFileName': 'IJavaInsnDecoder.java', 'fqn': 'jadx.plugins.input.java.data.code.decoders.IJavaInsnDecoder', 'fileName': '/jadx/plugins/input/java/data/code/decoders/IJavaInsnDecoder.class', 'visibility': 'public', 'name': 'IJavaInsnDecoder', 'byteCodeVersion': 55}}, {'n': {'valid': True, 'sourceFileName': 'IJavaInsnDecoder.java', 'fqn': 'jadx.plugins.input.java.data.code.decoders.IJavaInsnDecoder', 'fileName': '/build/classes/java/main/jadx/plugins/input/java/data/code/decoders/IJavaInsnDecoder.class', 'visibility': 'public', 'name': 'IJavaInsnDecoder', 'byteCodeVersion': 55}}, {'n': {'valid': True, 'sourceFileName': 'IJavaAttributeReader.java', 'fqn': 'jadx.plugins.input.java.data.attributes.IJavaAttributeReader', 'fileName': '/build/classes/java/main/jadx/plugins/input/java/data/attributes/IJavaAttributeReader.class', 'visibility': 'public', 'name': 'IJavaAttributeReader', 'byteCodeVersion': 55}}]
+2026-01-19 16:36:05,601 - [INFO] Inspecting properties for label 'Type:Enum'...
+2026-01-19 16:36:05,679 - [INFO] 
+Properties for Type:Enum:
+2026-01-19 16:36:05,679 - [INFO]   Distinct Keys: [{'keys(n)': ['visibility', 'sourceFileName', 'name', 'fileName', 'valid', 'final', 'fqn', 'byteCodeVersion']}]
+2026-01-19 16:36:05,679 - [INFO]   Sample Nodes: [{'n': {'valid': True, 'sourceFileName': 'ConstantType.java', 'fileName': '/jadx/plugins/input/java/data/ConstantType.class', 'fqn': 'jadx.plugins.input.java.data.ConstantType', 'visibility': 'public', 'name': 'ConstantType', 'final': True, 'byteCodeVersion': 55}}, {'n': {'valid': True, 'sourceFileName': 'StackFrameType.java', 'fileName': '/jadx/plugins/input/java/data/attributes/stack/StackFrameType.class', 'fqn': 'jadx.plugins.input.java.data.attributes.stack.StackFrameType', 'visibility': 'public', 'name': 'StackFrameType', 'final': True, 'byteCodeVersion': 55}}, {'n': {'valid': True, 'sourceFileName': 'StackValueType.java', 'fileName': '/jadx/plugins/input/java/data/attributes/stack/StackValueType.class', 'fqn': 'jadx.plugins.input.java.data.attributes.stack.StackValueType', 'visibility': 'public', 'name': 'StackValueType', 'final': True, 'byteCodeVersion': 55}}, {'n': {'valid': True, 'sourceFileName': 'ConstantType.java', 'fileName': '/build/classes/java/main/jadx/plugins/input/java/data/ConstantType.class', 'fqn': 'jadx.plugins.input.java.data.ConstantType', 'visibility': 'public', 'name': 'ConstantType', 'final': True, 'byteCodeVersion': 55}}, {'n': {'valid': True, 'sourceFileName': 'StackValueType.java', 'fileName': '/build/classes/java/main/jadx/plugins/input/java/data/attributes/stack/StackValueType.class', 'fqn': 'jadx.plugins.input.java.data.attributes.stack.StackValueType', 'visibility': 'public', 'name': 'StackValueType', 'final': True, 'byteCodeVersion': 55}}]
+2026-01-19 16:36:05,679 - [INFO] Inspecting properties for label 'Method'...
+2026-01-19 16:36:05,729 - [INFO] 
+Properties for Method:
+2026-01-19 16:36:05,729 - [INFO]   Distinct Keys: [{'keys(n)': ['visibility', 'cyclomaticComplexity', 'name', 'signature', 'firstLineNumber', 'lastLineNumber', 'effectiveLineCount']}]
+2026-01-19 16:36:05,729 - [INFO]   Sample Nodes: [{'n': {'firstLineNumber': 11, 'visibility': 'public', 'signature': 'void <init>(int,java.lang.String,byte[])', 'name': '<init>', 'lastLineNumber': 15, 'effectiveLineCount': 5, 'cyclomaticComplexity': 1}}, {'n': {'signature': 'void <init>()'}}, {'n': {'firstLineNumber': 18, 'visibility': 'public', 'signature': 'jadx.api.plugins.input.data.IClassData loadClassData()', 'name': 'loadClassData', 'lastLineNumber': 18, 'effectiveLineCount': 1, 'cyclomaticComplexity': 1}}, {'n': {'firstLineNumber': 31, 'visibility': 'public', 'signature': 'void <init>(jadx.plugins.input.java.JavaClassReader)', 'name': '<init>', 'lastLineNumber': 37, 'effectiveLineCount': 7, 'cyclomaticComplexity': 1}}, {'n': {'firstLineNumber': 22, 'visibility': 'public', 'signature': 'int getId()', 'name': 'getId', 'lastLineNumber': 22, 'effectiveLineCount': 1, 'cyclomaticComplexity': 1}}]
+2026-01-19 16:36:05,729 - [INFO] Inspecting properties for label 'Field'...
+2026-01-19 16:36:05,796 - [INFO] 
+Properties for Field:
+2026-01-19 16:36:05,796 - [INFO]   Distinct Keys: [{'keys(n)': ['final', 'name', 'visibility', 'signature', 'volatile', 'transient']}]
+2026-01-19 16:36:05,796 - [INFO]   Sample Nodes: [{'n': {'visibility': 'private', 'signature': 'int id', 'transient': False, 'final': True, 'name': 'id', 'volatile': False}}, {'n': {'visibility': 'private', 'transient': False, 'signature': 'java.lang.String fileName', 'final': True, 'name': 'fileName', 'volatile': False}}, {'n': {'visibility': 'private', 'signature': 'byte[] data', 'transient': False, 'final': True, 'name': 'data', 'volatile': False}}, {'n': {'static': True, 'visibility': 'private', 'transient': False, 'signature': 'org.slf4j.Logger LOG', 'final': True, 'name': 'LOG', 'volatile': False}}, {'n': {'static': True, 'visibility': 'private', 'transient': False, 'signature': 'int MAX_MAGIC_SIZE', 'final': True, 'name': 'MAX_MAGIC_SIZE', 'volatile': False}}]
+2026-01-19 16:36:05,796 - [INFO] Inspecting properties for label 'Artifact'...
+2026-01-19 16:36:05,845 - [INFO] 
+Properties for Artifact:
+2026-01-19 16:36:05,845 - [INFO]   Distinct Keys: [{'keys(n)': ['fileName']}]
+2026-01-19 16:36:05,845 - [INFO]   Sample Nodes: [{'n': {'fileName': '/home/xli/Public/jadx/jadx-plugins/jadx-java-input'}}, {'n': {'valid': True, 'fileName': '/build/libs/jadx-java-input-dev.jar'}}, {'n': {'fileName': '/home/xli/Public/jadx/jadx-plugins/jadx-apks-input'}}, {'n': {'valid': True, 'fileName': '/build/libs/jadx-apks-input-dev.jar'}}]
+2026-01-19 16:36:05,845 - [INFO] Inspecting properties for label 'Jar'...
+2026-01-19 16:36:05,914 - [INFO] 
+Properties for Jar:
+2026-01-19 16:36:05,914 - [INFO]   Distinct Keys: [{'keys(n)': ['valid', 'fileName']}]
+2026-01-19 16:36:05,914 - [INFO]   Sample Nodes: [{'n': {'valid': True, 'fileName': '/build/libs/jadx-java-input-dev.jar'}}, {'n': {'valid': True, 'fileName': '/build/libs/jadx-apks-input-dev.jar'}}]
+2026-01-19 16:36:05,914 - [INFO] Inspecting relationships of type 'CONTAINS'...
+2026-01-19 16:36:06,020 - [INFO] 
+Sample relationships for :CONTAINS:
+2026-01-19 16:36:06,020 - [INFO]   - ['File', 'Java', 'ServiceLoader'] /build/resources/main/META-INF/services/jadx.api.plugins.JadxPlugin -[:CONTAINS]-> ['Type', 'File', 'Java', 'ByteCode'] /jadx/plugins/input/java/JavaInputPlugin.class
+2026-01-19 16:36:06,020 - [INFO]   - ['File', 'Java', 'ServiceLoader'] /META-INF/services/jadx.api.plugins.JadxPlugin -[:CONTAINS]-> ['Type', 'File', 'Java', 'ByteCode', 'Class'] /jadx/plugins/input/java/JavaInputPlugin.class
+2026-01-19 16:36:06,020 - [INFO]   - ['Package', 'File', 'Java', 'Directory'] /jadx/plugins/input/java -[:CONTAINS]-> ['Type', 'File', 'Java', 'ByteCode', 'Class'] /jadx/plugins/input/java/JavaInputPlugin.class
+2026-01-19 16:36:06,020 - [INFO]   - ['File', 'Directory'] /META-INF -[:CONTAINS]-> ['File', 'Java', 'Manifest'] /META-INF/MANIFEST.MF
+2026-01-19 16:36:06,020 - [INFO]   - ['Package', 'File', 'Java', 'Directory'] /jadx/plugins/input/java/data/attributes/debuginfo -[:CONTAINS]-> ['Type', 'File', 'Java', 'ByteCode', 'Class'] /jadx/plugins/input/java/data/attributes/debuginfo/JavaLocalVar.class
+2026-01-19 16:36:06,020 - [INFO] Inspecting relationships of type 'DECLARES'...
+2026-01-19 16:36:06,074 - [INFO] 
+Sample relationships for :DECLARES:
+2026-01-19 16:36:06,074 - [INFO]   - ['File', 'Java', 'Manifest'] /META-INF/MANIFEST.MF -[:DECLARES]-> ['Java', 'ManifestSection'] None
+2026-01-19 16:36:06,074 - [INFO]   - ['Type', 'File', 'Java', 'ByteCode', 'Class'] /jadx/plugins/input/java/JavaClassReader.class -[:DECLARES]-> ['Java', 'ByteCode', 'Field', 'Member'] None
+2026-01-19 16:36:06,074 - [INFO]   - ['Type', 'File', 'Java', 'ByteCode', 'Class'] /jadx/plugins/input/java/JavaClassReader.class -[:DECLARES]-> ['Java', 'ByteCode', 'Field', 'Member'] None
+2026-01-19 16:36:06,074 - [INFO]   - ['Type', 'File', 'Java', 'ByteCode', 'Class'] /jadx/plugins/input/java/JavaClassReader.class -[:DECLARES]-> ['Java', 'ByteCode', 'Field', 'Member'] None
+2026-01-19 16:36:06,074 - [INFO]   - ['Type', 'File', 'Java', 'ByteCode', 'Class'] /jadx/plugins/input/java/JavaClassReader.class -[:DECLARES]-> ['Java', 'ByteCode', 'Member', 'Constructor', 'Method'] None
+2026-01-19 16:36:06,074 - [INFO] Inspecting relationships of type 'EXTENDS'...
+2026-01-19 16:36:06,131 - [INFO] 
+Sample relationships for :EXTENDS:
+2026-01-19 16:36:06,131 - [INFO]   - ['Type', 'File', 'Java', 'ByteCode', 'Class'] /jadx/plugins/input/java/JavaClassReader.class -[:EXTENDS]-> ['Type', 'File', 'Java', 'ByteCode'] /java/lang/Object.class
+2026-01-19 16:36:06,131 - [INFO]   - ['Type', 'File', 'Java', 'ByteCode', 'Class'] /jadx/plugins/input/java/JavaInputLoader.class -[:EXTENDS]-> ['Type', 'File', 'Java', 'ByteCode'] /java/lang/Object.class
+2026-01-19 16:36:06,131 - [INFO]   - ['Type', 'File', 'Java', 'ByteCode', 'Class'] /jadx/plugins/input/java/JavaInputPlugin.class -[:EXTENDS]-> ['Type', 'File', 'Java', 'ByteCode'] /java/lang/Object.class
+2026-01-19 16:36:06,131 - [INFO]   - ['Type', 'File', 'Java', 'ByteCode', 'Class'] /jadx/plugins/input/java/JavaLoadResult.class -[:EXTENDS]-> ['Type', 'File', 'Java', 'ByteCode'] /java/lang/Object.class
+2026-01-19 16:36:06,131 - [INFO]   - ['Type', 'File', 'Java', 'ByteCode', 'Class'] /jadx/plugins/input/java/data/ClassOffsets$1.class -[:EXTENDS]-> ['Type', 'File', 'Java', 'ByteCode'] /java/lang/Object.class
+2026-01-19 16:36:06,131 - [INFO] Inspecting relationships of type 'IMPLEMENTS'...
+2026-01-19 16:36:06,187 - [INFO] 
+Sample relationships for :IMPLEMENTS:
+2026-01-19 16:36:06,187 - [INFO]   - ['Type', 'File', 'Java', 'ByteCode', 'Class'] /jadx/plugins/input/java/JavaInputPlugin.class -[:IMPLEMENTS]-> ['Type', 'File', 'Java', 'ByteCode'] /jadx/api/plugins/JadxPlugin.class
+2026-01-19 16:36:06,187 - [INFO]   - ['Type', 'File', 'Java', 'ByteCode', 'Class'] /jadx/plugins/input/java/JavaLoadResult.class -[:IMPLEMENTS]-> ['Type', 'File', 'Java', 'ByteCode'] /jadx/api/plugins/input/ICodeLoader.class
+2026-01-19 16:36:06,187 - [INFO]   - ['Type', 'File', 'Java', 'ByteCode', 'Class'] /jadx/plugins/input/java/data/JavaClassData.class -[:IMPLEMENTS]-> ['Type', 'File', 'Java', 'ByteCode'] /jadx/api/plugins/input/data/IClassData.class
+2026-01-19 16:36:06,187 - [INFO]   - ['Type', 'File', 'Java', 'ByteCode', 'Class'] /jadx/plugins/input/java/data/JavaFieldData.class -[:IMPLEMENTS]-> ['Type', 'File', 'Java', 'ByteCode'] /jadx/api/plugins/input/data/IFieldData.class
+2026-01-19 16:36:06,188 - [INFO]   - ['Type', 'File', 'Java', 'ByteCode', 'Class'] /jadx/plugins/input/java/data/JavaMethodData.class -[:IMPLEMENTS]-> ['Type', 'File', 'Java', 'ByteCode'] /jadx/api/plugins/input/data/IMethodData.class
+2026-01-19 16:36:06,188 - [INFO] Inspecting relationships of type 'INVOKES'...
+2026-01-19 16:36:06,245 - [INFO] 
+Sample relationships for :INVOKES:
+2026-01-19 16:36:06,246 - [INFO]   - ['Java', 'ByteCode', 'Member', 'Constructor', 'Method'] None -[:INVOKES]-> ['Java', 'ByteCode', 'Member', 'Constructor', 'Method'] None
+2026-01-19 16:36:06,246 - [INFO]   - ['Java', 'ByteCode', 'Member', 'Method'] None -[:INVOKES]-> ['Java', 'ByteCode', 'Member', 'Constructor', 'Method'] None
+2026-01-19 16:36:06,246 - [INFO]   - ['Java', 'ByteCode', 'Member', 'Constructor', 'Method'] None -[:INVOKES]-> ['Java', 'ByteCode', 'Member', 'Constructor', 'Method'] None
+2026-01-19 16:36:06,246 - [INFO]   - ['Java', 'ByteCode', 'Member', 'Constructor', 'Method'] None -[:INVOKES]-> ['Java', 'ByteCode', 'Member', 'Constructor', 'Method'] None
+2026-01-19 16:36:06,246 - [INFO]   - ['Java', 'ByteCode', 'Member', 'Constructor', 'Method'] None -[:INVOKES]-> ['Java', 'ByteCode', 'Member', 'Method'] None
+2026-01-19 16:36:06,246 - [INFO] 
+Specific Inspection for Artifact/Jar Nodes:
+2026-01-19 16:36:06,296 - [INFO]   - ['Artifact', 'File', 'Java', 'Directory'] /home/xli/Public/jadx/jadx-plugins/jadx-java-input -[:CONTAINS]-> ['File'] /src/main/java/jadx/plugins/input/java/data/attributes/types/IgnoredAttr.java
+2026-01-19 16:36:06,296 - [INFO]   - ['Artifact', 'File', 'Java', 'Directory'] /home/xli/Public/jadx/jadx-plugins/jadx-java-input -[:CONTAINS]-> ['Type', 'File', 'Java', 'ByteCode', 'Class'] /build/classes/java/main/jadx/plugins/input/java/data/attributes/debuginfo/JavaLocalVar.class
+2026-01-19 16:36:06,296 - [INFO]   - ['Artifact', 'File', 'Java', 'Directory'] /home/xli/Public/jadx/jadx-plugins/jadx-java-input -[:CONTAINS]-> ['Package', 'File', 'Java', 'Directory'] /src/test/java/jadx/plugins
+2026-01-19 16:36:06,296 - [INFO]   - ['Artifact', 'File', 'Java', 'Directory'] /home/xli/Public/jadx/jadx-plugins/jadx-java-input -[:CONTAINS]-> ['Package', 'File', 'Java', 'Directory'] /src/main/java/jadx/plugins/input/java/utils
+2026-01-19 16:36:06,296 - [INFO]   - ['Artifact', 'File', 'Java', 'Directory'] /home/xli/Public/jadx/jadx-plugins/jadx-java-input -[:CONTAINS]-> ['Type', 'File', 'Java', 'ByteCode', 'Class'] /build/classes/java/main/jadx/plugins/input/java/utils/DescriptorParser.class
+2026-01-19 16:36:06,296 - [INFO]   - ['Artifact', 'File', 'Java', 'Directory'] /home/xli/Public/jadx/jadx-plugins/jadx-java-input -[:CONTAINS]-> ['Type', 'File', 'Java', 'ByteCode', 'Class'] /build/classes/java/main/jadx/plugins/input/java/data/ConstPoolReader.class
+2026-01-19 16:36:06,296 - [INFO]   - ['Artifact', 'File', 'Java', 'Directory'] /home/xli/Public/jadx/jadx-plugins/jadx-java-input -[:CONTAINS]-> ['Type', 'File', 'Java', 'ByteCode', 'Class'] /build/classes/java/main/jadx/plugins/input/java/data/attributes/types/JavaMethodParametersAttr.class
+2026-01-19 16:36:06,296 - [INFO]   - ['Artifact', 'File', 'Java', 'Directory'] /home/xli/Public/jadx/jadx-plugins/jadx-java-input -[:CONTAINS]-> ['Package', 'File', 'Java', 'Directory'] /build/tmp/jar
+2026-01-19 16:36:06,296 - [INFO]   - ['Artifact', 'File', 'Java', 'Directory'] /home/xli/Public/jadx/jadx-plugins/jadx-java-input -[:CONTAINS]-> ['Type', 'File', 'Java', 'ByteCode', 'Class'] /build/classes/java/main/jadx/plugins/input/java/data/attributes/stack/StackFrame.class
+2026-01-19 16:36:06,296 - [INFO]   - ['Artifact', 'File', 'Java', 'Directory'] /home/xli/Public/jadx/jadx-plugins/jadx-java-input -[:CONTAINS]-> ['File'] /src/main/java/jadx/plugins/input/java/data/JavaMethodProto.java
+2026-01-19 16:36:06,296 - [INFO] 
+--- jQAssistant Schema Analysis Complete ---
+2026-01-19 16:36:06,296 - [INFO] Neo4j connection closed.
