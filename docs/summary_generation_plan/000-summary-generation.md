@@ -20,6 +20,7 @@ jQAssistant's graph model presents several challenges that require specific hand
 3.  **Confusing `File` and `Directory` Labels**: jQAssistant can label classes and directories as `:File`, leading to ambiguity. We will introduce a `:SourceFile` label for clarity.
 4.  **No Explicit `:Project` Node**: jQAssistant doesn't create a single `:Project` node by default. We will create one and link it to top-level directories.
 5.  **Jar File Representation**: `:Jar` nodes act as containers for packages and types. Summaries for these will be handled carefully, potentially skipped or made metadata-only.
+6.  **Neo4j `id()` Deprecation**: Neo4j 5.x deprecates the `id()` function. All queries have been updated to use `elementId()` for node identification.
 
 ## Multi-Pass Summarization Workflow
 
@@ -32,13 +33,13 @@ The summarization will proceed through a series of distinct passes, each buildin
     *   Identify top-level `:Directory` nodes (potential project roots).
     *   Label them as `:Entry`.
     *   Create a single `:Project` node and link it to these `:Entry` nodes.
-    *   Ensure all `:File` and `:Directory` nodes have a consistent `relative_path` property (derived from `fileName`).
+    *   Ensure all `:File` and `:Directory` nodes under an `:Entry:Directory` have a consistent `absolute_path` property.
 *   **020-identify-source-files.md**:
-    *   Identify `:File` nodes that correspond to `.java` or `.kt` source files.
+    *   Identify `:File` nodes that correspond to `.java` or `.kt` source files using their `absolute_path`.
     *   Label them as `:SourceFile` to distinguish them from other `:File` nodes (e.g., `.class` files, `.jar` files).
-*   **030-reconstruct-direct-directory-hierarchy.md**:
-    *   Reconstruct the *direct* parent-child relationships for directories using `relative_path` properties.
-    *   Create new `[:CONTAINS_DIRECT]` relationships between a `:Directory` and its immediate child `:SourceFile` or `:Directory` nodes. This is crucial for accurate roll-up.
+*   **030-establish-direct-source-hierarchy.md**:
+    *   Reconstruct the *direct* parent-child relationships for directories and source files using `absolute_path` properties.
+    *   Create new `[:CONTAINS_SOURCE]` relationships between a `:Directory` and its immediate child `:SourceFile` or `:Directory` nodes, and from the `:Project` to top-level items. This is crucial for accurate roll-up.
 
 ### Core Summarization Passes: Bottom-Up Roll-up
 
@@ -46,13 +47,16 @@ The summarization will proceed through a series of distinct passes, each buildin
     *   Generate `code_analysis` for `:Method` nodes.
     *   Generate `summary` for `:Method` nodes based on their `code_analysis` and context from caller/callee methods.
 *   **050-type-summaries.md**:
-    *   Generate `summary` for `:Type:Class`, `:Type:Interface`, `:Type:Enum`, `:Type:Annotation`, `:Type:Record` nodes.
-    *   Summarization order will respect inheritance/implementation hierarchies.
-    *   Summaries will incorporate method summaries (from Pass 0) and source code content (via `[:WITH_SOURCE]`).
+    *   Generate `summary` for `:Type` nodes (Class, Interface, Enum, Record).
+    *   Summarization order will respect inheritance/implementation hierarchies, ensuring parent summaries are generated before children.
+    *   Summaries will incorporate method summaries (from Pass 040) and parent type summaries.
+    *   **Crucially, a Type node will only receive a summary if it has summarized methods or parent types (rolling-up logic).** This also correctly handles external types (e.g., `java.lang.Object`) that might not have specific labels like `:Class`, `:Interface`, etc., by matching on the generic `:Type` label.
 *   **060-source-file-summaries.md**:
     *   Generate `summary` for `:SourceFile` nodes by rolling up summaries from the `:Type` nodes they contain (via `[:WITH_SOURCE]` in reverse).
+    *   **A SourceFile node will only receive a summary if it contains summarized Type nodes (rolling-up logic).**
 *   **070-directory-summaries.md**:
-    *   Generate `summary` for `:Directory` nodes by rolling up summaries from their *direct* children (`:SourceFile` and `:Directory`) using the newly created `[:CONTAINS_DIRECT]` relationships.
+    *   Generate `summary` for `:Directory` nodes by rolling up summaries from their *direct* children (`:SourceFile` and `:Directory`) using the newly created `[:CONTAINS_SOURCE]` relationships.
+    *   **A Directory node will only receive a summary if it has summarized children (rolling-up logic).**
 *   **080-package-summaries.md**:
     *   Generate `summary` for `:Package` nodes.
     *   Summaries will roll up from the `:Type` nodes that belong to them.
