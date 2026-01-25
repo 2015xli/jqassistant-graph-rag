@@ -11,7 +11,7 @@ This pass is crucial for enabling efficient semantic search across the entire gr
 ## 2. Rationale
 
 *   **Simplified Agent Search**: Instead of requiring the AI agent to know and query multiple label-specific vector indexes, it can now query a single `summary_embeddings` index on the `:Entity` label.
-*   **Universal `id` Property**: This pass complements the universal `id` property (from Pass 010) by ensuring all summarizable nodes are consistently searchable and retrievable.
+*   **Universal Identification**: Using Neo4j's `elementId()` for processing ensures that every node can be uniquely identified and updated, even without a universal custom ID property, and is compatible with Neo4j 5.x.
 *   **Performance**: A single, well-maintained vector index can be more efficient for broad semantic searches.
 
 ## 3. Actionable Steps (Cypher Queries and LLM Interaction)
@@ -39,14 +39,15 @@ This pass will involve:
     ```cypher
     MATCH (e:Entity)
     WHERE e.summary IS NOT NULL AND e.summaryEmbedding IS NULL
-    RETURN e.id AS nodeId, e.summary AS nodeSummary
+    RETURN elementId(e) AS nodeId, e.summary AS nodeSummary
     LIMIT 1000 // Process in batches
     ```
 *   **LLM Call**: Send `nodeSummary` to the embedding model to get the vector.
 *   **Cypher (to update `summaryEmbedding`)**:
     ```cypher
     UNWIND $nodes AS nodeData
-    MATCH (e:Entity {id: nodeData.nodeId})
+    MATCH (e:Entity)
+    WHERE elementId(e) = nodeData.nodeId
     SET e.summaryEmbedding = nodeData.embedding
     ```
 

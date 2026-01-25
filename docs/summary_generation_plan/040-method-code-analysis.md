@@ -2,60 +2,62 @@
 
 ## 1. Goal
 
-This pass focuses on generating initial summaries for `:Method` nodes. As per user feedback, jQAssistant's `:Method` nodes do not directly have a `fileName` property, and we need to generate `code_analysis` (not `codeSummary`) for them. This pass will:
-
-1.  For each `:Method` node, identify its declaring `:Type` node.
-2.  From the declaring `:Type` node, find its associated `:SourceFile` node (via `[:WITH_SOURCE]`).
-3.  Read the source code of the `:SourceFile` and extract the specific code snippet corresponding to the method's body.
-4.  Generate a `code_analysis` property for the `:Method` node based on this extracted code snippet.
-5.  Generate an initial `summary` for the `:Method` node based on its `code_analysis` and its name/signature, without yet incorporating context from its parent type.
+This pass focuses on generating initial summaries for `:Method` nodes. It will extract the source code for each method, generate a detailed `code_analysis` property, and then create a concise `summary` property based on that analysis.
 
 ## 2. Rationale
 
 *   **Foundation for Roll-up**: Method summaries are the lowest-level code-centric summaries, forming the foundation for higher-level type and file summaries.
 *   **Code-Specific Analysis**: `code_analysis` provides a detailed, LLM-generated understanding of the method's literal function.
 *   **Contextual Summary**: The initial `summary` provides a concise overview of the method's purpose.
+*   **Direct Source Access**: Leverages the `(Member)-[:WITH_SOURCE]->(SourceFile)` relationship created in Pass 035 for efficient source code retrieval.
 
 ## 3. Actionable Steps (Cypher Queries and LLM Interaction)
 
 This pass will involve:
-*   Cypher queries to traverse the graph and retrieve method source code.
-*   LLM calls to generate `code_analysis` and `summary` properties.
+*   Cypher queries to traverse the graph and retrieve method source code details.
+*   Reading source files from the file system.
+*   LLM calls (simulated for now) to generate `code_analysis` and `summary` properties.
 
 ### Step 3.1: Retrieve Method Source Code and Context
 
-*   **Logic**: Find `:Method` nodes, traverse to their declaring `:Type` and then to the `:SourceFile`. Use the `fileName` of the `:SourceFile` and the method's `signature` (or other properties) to locate the method's body within the file.
+*   **Logic**: Find `:Method` nodes that have `firstLineNumber`, `lastLineNumber`, and are linked to a `:SourceFile` via `[:WITH_SOURCE]`.
 *   **Cypher (to get method details and source file path)**:
-    *   **Cypher (to get method details and source file path)**:
     ```cypher
-    MATCH (type:Type)-[:DECLARES]->(method:Method)-[:WITH_SOURCE]->(sourceFile:SourceFile)
-    WHERE method.signature IS NOT NULL AND sourceFile.fileName IS NOT NULL
-    RETURN method.fqn AS methodFqn, method.signature AS methodSignature, sourceFile.fileName AS sourceFilePath
-    LIMIT 1000 // Process in batches
+    MATCH (m:Method)-[:WITH_SOURCE]->(sf:SourceFile)
+    WHERE m.firstLineNumber IS NOT NULL AND m.lastLineNumber IS NOT NULL
+    AND sf.absolute_path IS NOT NULL
+    RETURN id(m) AS methodId, m.name AS methodName, m.signature AS methodSignature,
+           sf.absolute_path AS sourceFilePath, m.firstLineNumber AS firstLine, m.lastLineNumber AS lastLine
     ```
-    *   **Note**: jQAssistant's schema for methods might be complex. We need to verify the exact relationship between `:Method` and `:Type` (e.g., `[:DECLARES]`, `[:CONTAINS]`, `[:HAS_METHOD]`). The `fqn` of the method might also be useful.
-    *   **Challenge**: jQAssistant's `:Method` nodes typically have `signature` and `name` but often lack precise `body_location` (start/end lines) in the source file. This means we might need to use heuristics (e.g., regex matching the signature within the file) or a more advanced source code parser (like `tree-sitter`) to extract the exact method body. For this plan, we assume we can extract the method body given its signature and source file.
+    *   **Note**: `id(m)` is used to uniquely identify the method node for later updates.
 
-### Step 3.2: Generate `code_analysis` for Methods
+### Step 3.2: Extract Code Snippet
 
-*   **Logic**: For each method, extract its source code snippet. Send this snippet to an LLM with a prompt asking for a detailed code analysis. Store the result in `method.code_analysis`.
-*   **LLM Prompt Example**: "Analyze the following Java/Kotlin method code and describe its literal function, inputs, and outputs. Focus purely on what the code does, not its purpose in the larger system."
-*   **Cypher (to update `code_analysis`)**:
+*   **Logic**: For each method record retrieved in Step 3.1, read the `sourceFilePath` from the file system and extract the lines between `firstLine` and `lastLine`.
+*   **Implementation**: This will be handled by the `_extract_method_code_snippet` method in `CodeAnalyzer`.
+
+### Step 3.3: Generate `code_analysis` for Methods
+
+*   **Logic**: Send the extracted code snippet to an LLM (simulated) with a prompt asking for a detailed code analysis. Store the result in `m.code_analysis`.
+*   **LLM Prompt Example (simulated)**: "Analyze the following Java/Kotlin method code and describe its literal function, inputs, and outputs. Focus purely on what the code does, not its purpose in the larger system."
+*   **Implementation**: Handled by `_generate_code_analysis` in `CodeAnalyzer`.
+
+### Step 3.4: Generate `summary` for Methods
+
+*   **Logic**: Use the generated `code_analysis` and the method's name/signature to generate a concise `summary` property.
+*   **LLM Prompt Example (simulated)**: "Based on the following code analysis, provide a concise summary of this method's purpose."
+*   **Implementation**: Handled by `_generate_summary` in `CodeAnalyzer`.
+
+### Step 3.5: Update Neo4j Graph
+
+*   **Logic**: Batch update the `:Method` nodes with the newly generated `code_analysis` and `summary` properties.
+*   **Cypher (to update `code_analysis` and `summary`)**:
     ```cypher
-    UNWIND $methods AS methodData
-    MATCH (m:Method {fqn: methodData.methodFqn})
-    SET m.code_analysis = methodData.analysis
-    ```
-
-### Step 3.3: Generate `summary` for Methods
-
-*   **Logic**: For each method, use its `code_analysis` (from Step 3.2) and its name/signature to generate a concise `summary` property. This summary should describe the method's purpose.
-*   **LLM Prompt Example**: "Based on the following code analysis, provide a concise summary of this method's purpose."
-*   **Cypher (to update `summary`)**:
-    ```cypher
-    UNWIND $methods AS methodData
-    MATCH (m:Method {fqn: methodData.methodFqn})
-    SET m.summary = methodData.summary
+    UNWIND $updates AS item
+    MATCH (m:Method)
+    WHERE id(m) = item.methodId
+    SET m.code_analysis = item.code_analysis,
+        m.summary = item.summary
     ```
 
 ## 4. Expected Outcome

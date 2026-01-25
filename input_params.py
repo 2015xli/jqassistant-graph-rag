@@ -11,14 +11,18 @@ def add_neo4j_args(parser: argparse.ArgumentParser):
     group.add_argument("--password", default=os.getenv("NEO4J_PASSWORD", "neo4j"),
                        help="Neo4j password (default: neo4j or NEO4J_PASSWORD env var)")
 
-def add_project_path_args(parser: argparse.ArgumentParser):
-    """Adds project path argument to the parser."""
-    group = parser.add_argument_group("Project Configuration")
-    group.add_argument("project_path", type=str,
-                       help="The root path of the Java project to scan.")
-
 def add_logging_args(parser: argparse.ArgumentParser):
     """Adds logging related arguments to the parser."""
     group = parser.add_argument_group("Logging Configuration")
     group.add_argument("--log-level", default="INFO", choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
-                       help="Set the logging level (default: INFO)")
+                       help="Set the console logging level (default: INFO)")
+    group.add_argument("--log-file", default="debug.log",
+                       help="Set the file for debug logging (default: debug.log). Only DEBUG messages are written here.")
+
+def add_rag_args(parser: argparse.ArgumentParser):
+    """Adds arguments related to RAG (summary and embedding) generation."""
+    rag_group = parser.add_argument_group('RAG Generation (Optional)')
+    rag_group.add_argument('--generate-summary', action='store_true',
+                        help='Generate AI summaries and embeddings for the code graph.')
+    rag_group.add_argument('--llm-api', choices=['openai', 'deepseek', 'ollama', 'fake'], default='fake',
+                        help='The LLM API to use for summarization. (default fake)')
