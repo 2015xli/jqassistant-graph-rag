@@ -3,6 +3,7 @@ from typing import Dict, Any, Optional, List
 from base_summarizer import BaseSummarizer
 from node_summary_processor import NodeSummaryProcessor
 from neo4j_manager import Neo4jManager
+from collections import defaultdict
 
 logger = logging.getLogger(__name__)
 
@@ -21,34 +22,46 @@ class DirectorySummarizer(BaseSummarizer):
 
     def run(self) -> int:
         """
-        Executes the directory summarization pass.
+        Executes the directory summarization pass, processing directories level by level
+        from deepest to shallowest.
         """
         logger.info(f"--- Starting Pass: {self.__class__.__name__} ---")
 
-        items_to_process = self._get_directories_ordered_by_depth()
-        if not items_to_process:
+        all_directories_with_depth = self._get_directories_ordered_by_depth()
+        if not all_directories_with_depth:
             logger.info("No directories found to process.")
             return 0
 
-        logger.info(f"Found {len(items_to_process)} directories to process.")
-        updated_count = self.process_batch(items_to_process)
+        # Group directories by depth
+        directories_by_depth = defaultdict(list)
+        for item in all_directories_with_depth:
+            directories_by_depth[item['depth']].append(item)
+
+        total_updated_count = 0
+        # Process levels from deepest to shallowest
+        for depth in sorted(directories_by_depth.keys(), reverse=True):
+            items_at_current_depth = directories_by_depth[depth]
+            logger.info(
+                f"Processing {len(items_at_current_depth)} directories at depth {depth}."
+            )
+            updated_count = self.process_batch(items_at_current_depth)
+            total_updated_count += updated_count
 
         logger.info(
             f"--- Pass {self.__class__.__name__} complete. "
-            f"Updated {updated_count} summaries. ---"
+            f"Updated {total_updated_count} summaries. ---"
         )
-        return updated_count
+        return total_updated_count
 
     def _get_directories_ordered_by_depth(self) -> List[Dict[str, Any]]:
         """
         Fetches all directories, ordered from deepest to shallowest, along
-        with the context of their direct children.
+        with the context of their direct children and their depth.
         """
         query = """
         MATCH (d:Directory)
         WHERE d.absolute_path IS NOT NULL
-        // Order by path depth to process deepest directories first
-        WITH d ORDER BY size(split(d.absolute_path, '/')) DESC
+        WITH d, size(split(d.absolute_path, '/')) AS depth
         // Gather context from direct children
         OPTIONAL MATCH (d)-[:CONTAINS_SOURCE]->(child)
         WHERE child:SourceFile OR child:Directory
@@ -56,7 +69,9 @@ class DirectorySummarizer(BaseSummarizer):
             d.entity_id AS id,
             d.absolute_path AS path,
             d.summary AS db_summary,
-            collect(DISTINCT child.entity_id) AS dependency_ids
+            collect(DISTINCT child.entity_id) AS dependency_ids,
+            depth
+        ORDER BY depth DESC
         """
         return self.neo4j_manager.execute_read_query(query)
 

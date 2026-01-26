@@ -1,7 +1,8 @@
 import os
 import logging
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Tuple
 from pathlib import Path
+from neo4j_manager import Neo4jManager # New import
 
 # Tree-sitter imports
 try:
@@ -19,101 +20,90 @@ class JavaSourceParser:
     """
     Parses Java source files to extract metadata like package name and top-level classes.
     """
-    def __init__(self, project_path: str):
+    def __init__(self, neo4j_manager: Neo4jManager): # Modified signature
         if _parser is None:
             raise ImportError("tree-sitter-java is required for Java parsing but not installed.")
-        self.project_path = Path(project_path).resolve()
-        if not self.project_path.is_dir():
-            raise ValueError(f"Project path '{project_path}' is not a valid directory.")
-        logger.info(f"Initialized JavaSourceParser for project: {self.project_path}")
+        self.neo4j_manager = neo4j_manager # Store neo4j_manager
+        logger.info("Initialized JavaSourceParser.")
 
-    def _get_java_file_metadata(self, file_path: Path) -> Dict[str, Any]:
+    def _get_java_file_metadata(self, absolute_disk_path: Path, file_relative_path_in_graph: str) -> Dict[str, Any]:
         """
         Parses a .java file using tree-sitter and returns a dictionary with package and top-level types (FQNs).
         """
-        # jQAssistant paths usually start with a '/'
-        relative_path = '/' + str(file_path.relative_to(self.project_path))
-        # TODO: Assuming the source files are under /path-to/src. Should be removed in the future
-        if False: # User requested to keep this debug block
-            if "/src" in relative_path:
-                relative_path = relative_path.split("/src", 1)[1]
-
         try:
-            with open(file_path, "rb") as f: # Read as binary for tree-sitter
+            with open(absolute_disk_path, "rb") as f: # Read as binary for tree-sitter
                 content = f.read()
-            
+
             tree = _parser.parse(content)
             root = tree.root_node
-            
-            package_name = ""
-            # Store (type_name, declaration_type) tuples to handle module_declaration FQN correctly
-            found_types_with_kind = [] 
 
-            # Iterate only through top-level children of the source_file
+            package_name = ""
+            found_types_with_kind = []
+
             for child in root.children:
-                # 1. Find the Package Name
                 if child.type == "package_declaration":
                     for node in child.children:
                         if node.type == "scoped_identifier":
                             package_name = node.text.decode("utf-8")
                             break
-                
-                # 2. Find Top-Level Classes, Interfaces, Enums, Annotations, Records
                 elif child.type in ["class_declaration", "interface_declaration", "enum_declaration", "annotation_type_declaration", "record_declaration"]:
                     name_node = child.child_by_field_name("name")
                     if name_node:
                         found_types_with_kind.append((name_node.text.decode("utf-8"), child.type))
-                
-                # 3. Handle module-info.java
                 elif child.type == "module_declaration":
                     name_node = child.child_by_field_name("name")
                     if name_node:
                         found_types_with_kind.append((name_node.text.decode("utf-8"), child.type))
-            
-            # Build the full FQNs
+
             fqns = []
             prefix = f"{package_name}." if package_name else ""
-            
+
             for type_name, kind in found_types_with_kind:
                 if kind == "module_declaration":
-                    # Module name is its FQN directly
                     fqns.append(type_name)
                 else:
                     fqns.append(f"{prefix}{type_name}")
-            
-            # Special handling for package-info.java: its FQN is just the package name
-            if file_path.name == "package-info.java" and package_name and package_name not in fqns:
+
+            if absolute_disk_path.name == "package-info.java" and package_name and package_name not in fqns:
                 fqns.append(package_name)
 
             return {
-                "path": relative_path, 
+                "path": file_relative_path_in_graph,
                 "package": package_name,
                 "fqns": fqns
             }
         except Exception as e:
-            logger.error(f"Error reading or processing Java file {file_path}: {e}")
+            logger.error(f"Error reading or processing Java file {absolute_disk_path}: {e}")
             return {
-                "path": relative_path,
+                "path": file_relative_path_in_graph,
                 "package": "",
                 "fqns": [],
                 "error": str(e)
             }
 
-    def parse_project(self) -> List[Dict[str, Any]]:
+    def parse_project(self) -> List[Dict[str, Any]]: # Modified signature and logic
         """
-        Walks the project directory, parses all Java files, and returns their metadata.
+        Queries Neo4j for Java source files, parses them, and returns their metadata.
         """
+        query = """
+        MATCH (a:Artifact:Directory)-[:CONTAINS]->(f:File)
+        WHERE (NOT f:Directory) AND (f.fileName ENDS WITH '.java') 
+        RETURN a.fileName AS artifactAbsolutePath, f.fileName AS fileRelativePath
+        """
+        java_files_in_graph = self.neo4j_manager.execute_read_query(query)
+
+        files_to_parse_info = []
+        for record in java_files_in_graph:
+            artifact_abs_path = record["artifactAbsolutePath"]
+            file_rel_path = record["fileRelativePath"]
+            absolute_disk_path = Path(os.path.join(artifact_abs_path, file_rel_path.lstrip('/')))
+            files_to_parse_info.append((absolute_disk_path, file_rel_path))
+
         all_java_metadata = []
-        logger.info(f"Scanning project directory: {self.project_path}")
-        for root, _, files in os.walk(self.project_path):
-            for file_name in files:
-                if file_name.endswith(".java"):
-                    file_path = Path(root) / file_name
-                    metadata = self._get_java_file_metadata(file_path)
-                    if True: # User requested to keep this debug block
-                        if file_name == "QuarkReportPanel.java":
-                            logger.info(f"Metadata for {file_name}:\n {metadata}")
-                    if metadata:
-                        all_java_metadata.append(metadata)
-        logger.info(f"Finished scanning. Found metadata for {len(all_java_metadata)} Java files.")
+        logger.info(f"Parsing {len(files_to_parse_info)} Java files from graph query.")
+        for absolute_disk_path, file_relative_path_in_graph in files_to_parse_info:
+            metadata = self._get_java_file_metadata(absolute_disk_path, file_relative_path_in_graph)
+            if metadata:
+                all_java_metadata.append(metadata)
+        logger.info(f"Finished parsing. Found metadata for {len(all_java_metadata)} Java files.")
         return all_java_metadata

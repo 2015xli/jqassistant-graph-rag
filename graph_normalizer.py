@@ -26,9 +26,10 @@ class GraphNormalizer:
         self._identify_and_label_entry_nodes()
         self._add_absolute_path_to_filesystem_nodes()
         self._label_source_files()
+        self._identify_entities() # Entity ID generation must happen before hierarchical linking for dependency_ids
         self._establish_direct_source_hierarchy()
         self._link_members_to_source_files()
-        self._identify_entities()
+        
 
     def _create_project_node(self):
         """Creates a single :Project node."""
@@ -155,42 +156,76 @@ class GraphNormalizer:
 
     def _establish_direct_source_hierarchy(self):
         """
-        Implements Pass 030: Establishes a clear, direct hierarchical
-        structure for source entities using [:CONTAINS_SOURCE].
+        Establishes a clear, direct hierarchical structure for source entities
+        using [:CONTAINS_SOURCE], processing level by level from deepest to shallowest.
         """
         logger.info("\n--- Starting Pass 030: Establish Direct Source Hierarchy ---")
 
-        # Link directories to their direct source file children
-        query_dir_to_sf = """
-        MATCH (sf:SourceFile)
-        WHERE sf.absolute_path IS NOT NULL
-        WITH sf, apoc.text.join(split(sf.absolute_path, '/')[0..-1], '/') AS parentPath
-        MATCH (parent:Directory {absolute_path: parentPath})
-        MERGE (parent)-[r:CONTAINS_SOURCE]->(sf)
-        RETURN count(r) AS relationshipsCreated
+        # 1. Get all directories with their depths
+        query_all_dirs = """
+        MATCH (d:Directory)
+        WHERE d.absolute_path IS NOT NULL
+        RETURN d.entity_id AS id, d.absolute_path AS path, size(split(d.absolute_path, '/')) AS depth
         """
-        result_dir_to_sf = self.neo4j_manager.execute_write_query(query_dir_to_sf)
+        all_dirs_with_depth = self.neo4j_manager.execute_read_query(query_all_dirs)
+
+        if not all_dirs_with_depth:
+            logger.info("No directories found to establish hierarchy for.")
+            return
+
+        # Group directories by depth
+        from collections import defaultdict
+        dirs_by_depth = defaultdict(list)
+        for item in all_dirs_with_depth:
+            dirs_by_depth[item['depth']].append(item['id'])
+
+        total_sf_relationships_created = 0
+        total_dir_relationships_created = 0
+
+        # Process levels from deepest to shallowest
+        for depth in sorted(dirs_by_depth.keys(), reverse=True):
+            current_depth_dir_ids = dirs_by_depth[depth]
+            logger.info(f"Establishing hierarchy for {len(current_depth_dir_ids)} directories at depth {depth}.")
+
+            # Query 1: Link directories to their direct SourceFile children
+            query_dir_to_sf = """
+            UNWIND $current_depth_ids AS dir_id
+            MATCH (parentDir:Directory {entity_id: dir_id})
+            MATCH (sf:SourceFile)
+            WHERE sf.absolute_path STARTS WITH parentDir.absolute_path + '/'
+              AND size(split(sf.absolute_path, '/')) = size(split(parentDir.absolute_path, '/')) + 1
+            MERGE (parentDir)-[r:CONTAINS_SOURCE]->(sf)
+            RETURN count(r) AS relationshipsCreated
+            """
+            result_dir_to_sf = self.neo4j_manager.execute_write_query(
+                query_dir_to_sf, params={"current_depth_ids": current_depth_dir_ids}
+            )
+            total_sf_relationships_created += result_dir_to_sf.relationships_created
+
+            # Query 2: Link directories to their direct Directory children
+            query_dir_to_dir = """
+            UNWIND $current_depth_ids AS parent_dir_id
+            MATCH (parentDir:Directory {entity_id: parent_dir_id})
+            MATCH (childDir:Directory)
+            WHERE childDir.absolute_path STARTS WITH parentDir.absolute_path + '/'
+              AND size(split(childDir.absolute_path, '/')) = size(split(parentDir.absolute_path, '/')) + 1
+              AND NOT childDir:Entry // Exclude Entry nodes as children of other directories
+            MERGE (parentDir)-[r:CONTAINS_SOURCE]->(childDir)
+            RETURN count(r) AS relationshipsCreated
+            """
+            result_dir_to_dir = self.neo4j_manager.execute_write_query(
+                query_dir_to_dir, params={"current_depth_ids": current_depth_dir_ids}
+            )
+            total_dir_relationships_created += result_dir_to_dir.relationships_created
+
         logger.info(
-            f"Created {result_dir_to_sf.relationships_created} [:CONTAINS_SOURCE] "
+            f"Created {total_sf_relationships_created} [:CONTAINS_SOURCE] "
             "relationships from directories to source files."
         )
-
-        # Link directories to their direct directory children that contain source
-        query_dir_to_dir = """
-        MATCH (childDir:Directory)
-        WHERE childDir.absolute_path IS NOT NULL AND (childDir)-[:CONTAINS_SOURCE]->()
-        AND NOT (childDir:Entry)
-        WITH childDir, apoc.text.join(split(childDir.absolute_path, '/')[0..-1], '/') AS parentPath
-        MATCH (parentDir:Directory {absolute_path: parentPath})
-        MERGE (parentDir)-[r:CONTAINS_SOURCE]->(childDir)
-        RETURN count(r) AS relationshipsCreated
-        """
-        result_dir_to_dir = self.neo4j_manager.execute_write_query(query_dir_to_dir)
         logger.info(
-            f"Created {result_dir_to_dir.relationships_created} [:CONTAINS_SOURCE] "
+            f"Created {total_dir_relationships_created} [:CONTAINS_SOURCE] "
             "relationships between directories."
         )
-
         logger.info("--- Finished Pass 030 ---")
 
     def _link_members_to_source_files(self):

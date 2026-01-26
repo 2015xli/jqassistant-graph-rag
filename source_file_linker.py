@@ -20,7 +20,7 @@ class SourceFileLinker:
 
     def __init__(self, neo4j_manager: Neo4jManager, project_path: Path):
         self.neo4j_manager = neo4j_manager
-        self.project_path = project_path
+        self.project_path = project_path # Still needed for GraphNormalizer, not for parsers anymore
         logger.info("Initialized SourceFileLinker.")
 
     def run(self):
@@ -50,16 +50,16 @@ class SourceFileLinker:
 
     def _parse_source_files(self) -> List[Dict[str, Any]]:
         """
-        Parses all Java and Kotlin files in the project path.
+        Parses all Java and Kotlin files by querying Neo4j for their locations.
         """
         all_source_metadata: List[Dict[str, Any]] = []
 
-        java_parser = JavaSourceParser(str(self.project_path))
-        all_source_metadata.extend(java_parser.parse_project())
+        java_parser = JavaSourceParser(self.neo4j_manager) # Pass neo4j_manager
+        all_source_metadata.extend(java_parser.parse_project()) # Call parse_project() without args
 
         try:
-            kotlin_parser = KotlinSourceParser(str(self.project_path))
-            all_source_metadata.extend(kotlin_parser.parse_project())
+            kotlin_parser = KotlinSourceParser(self.neo4j_manager) # Pass neo4j_manager
+            all_source_metadata.extend(kotlin_parser.parse_project()) # Call parse_project() without args
         except ImportError as e:
             logger.warning(f"Kotlin parsing skipped: {e}")
         except Exception as e:
