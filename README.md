@@ -95,6 +95,4 @@ python3 schema_analyzer.py
 
 ## Documentation
 
-For a deep dive into the project's architecture, component responsibilities, and the logic behind the hierarchical processing and iterative summarization, please see the detailed design documents:
-*   **[jQAssistant Graph Architecture](./docs/jqassistant-graph-architecture.md)**
-*   **[Designing for Modular and Scalable Summarization](./docs/designing-for-modular-scalable-summarization.md)**
+For a deep dive into the project's architecture, component responsibilities, and the logic behind the hierarchical processing and iterative summarization, please refer to the comprehensive documentation in the [docs/ directory](./docs/README.md).
