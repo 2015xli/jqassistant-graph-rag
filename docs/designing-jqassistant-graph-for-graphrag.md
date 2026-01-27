@@ -41,10 +41,10 @@ The enrichment process is broken down into sequential passes, where each pass bu
 
 -   **Purpose:** To connect abstract code entities (`:Type` nodes) to the physical files (`:File` nodes) where they are defined.
 -   **Process:**
-    1.  Uses `tree-sitter` to parse all `.java` and `.kt` source files in the project directory.
-    2.  For each file, it extracts the package name and the fully qualified names (FQNs) of all top-level types declared within it.
-    3.  It then executes a Cypher query to find the `:Type` node for each FQN and the `:File` node for the corresponding file path.
-    4.  Finally, it creates a `[:WITH_SOURCE]` relationship from the `:Type` node to its containing `:File` node.
+    1.  It queries Neo4j to find all `:Artifact:Directory` nodes and the `:File` nodes they `[:CONTAINS]` that represent `.java` or `.kt` source files (excluding `:Directory` nodes).
+    2.  For each identified source file, it constructs its absolute path on disk and passes it, along with its relative path in the graph, to language-specific parsers (`JavaSourceParser`, `KotlinSourceParser`).
+    3.  The parsers use `tree-sitter` to parse the file content and extract the package name and Fully Qualified Names (FQNs) of all top-level types declared within it.
+    4.  Finally, it executes a Cypher query to find the `:Type` node for each FQN and the `:File` node for the corresponding file path, then creates a `[:WITH_SOURCE]` relationship from the `:Type` node to its containing `:File` node.
 -   **Output:** A graph where `:Type` nodes are directly linked to the `:File` nodes that contain their source code.
 
 ---
@@ -72,19 +72,7 @@ The `GraphNormalizer` executes several sub-passes in sequence:
 -   **Process:** Finds all `:File` nodes whose `absolute_path` ends with `.java` or `.kt` and adds a `:SourceFile` label to them.
 -   **Output:** `:File` nodes for source code are now also labeled as `:SourceFile`.
 
-#### **2d. Establish Direct Source Hierarchy**
-
--   **Purpose:** To create a clean, traversable file-system hierarchy for the source code.
--   **Process:** Creates `[:CONTAINS_SOURCE]` relationships to form a tree from the `:Project` node down through `:Directory` nodes to other `:Directory` and `:SourceFile` nodes. This provides a simple parent-child hierarchy that is easy to traverse.
--   **Output:** A browsable source code hierarchy using a single, clear relationship type.
-
-#### **2e. Link Members to Source Files**
-
--   **Purpose:** To extend the source linking from types down to their members (`:Method` and `:Field`).
--   **Process:** For each `:Method` and `:Field`, it traverses to its parent `:Type`, finds the `:SourceFile` linked to that type (via the relationship created in Pass 1), and creates a direct `[:WITH_SOURCE]` relationship from the member to that same file.
--   **Output:** `:Method` and `:Field` nodes are now directly linked to the file containing their source code, enabling easy code extraction for analysis.
-
-#### **2f. Identify Entities and Create Stable IDs**
+#### **2d. Identify Entities and Create Stable IDs**
 
 -   **Purpose:** To assign a stable, unique, and deterministic identifier to every node that will be part of the RAG process. This ID is essential for caching and dependency tracking.
 -   **Process:**
@@ -92,6 +80,18 @@ The `GraphNormalizer` executes several sub-passes in sequence:
     2.  Adds the `:Entity` label to all relevant nodes (`:Project`, `:Artifact`, `:File`, `:Type`, `:Member`, etc.).
     3.  Generates an `entity_id` for each `:Entity` node. This ID is an MD5 hash of a composite key that guarantees uniqueness. For example, for a `:Type` node, the key is `"{Artifact.fileName} + {Node.fileName}"`.
 -   **Output:** All relevant nodes are labeled `:Entity` and have a unique, stable `entity_id` property.
+
+#### **2e. Establish Direct Source Hierarchy**
+
+-   **Purpose:** To create a clean, traversable file-system hierarchy for the source code.
+-   **Process:** Creates `[:CONTAINS_SOURCE]` relationships to form a tree from the `:Project` node down through `:Directory` nodes to other `:Directory` and `:SourceFile` nodes. This pass now processes directories level by level, from the deepest to the shallowest. For each level, it first links directories to their direct `:SourceFile` children and then links directories to their direct `:Directory` children. This level-by-level approach ensures that all child relationships are established before a parent attempts to link to them, preventing inconsistencies and providing a robust tree structure for hierarchical summarization.
+-   **Output:** A browsable source code hierarchy using a single, clear relationship type.
+
+#### **2f. Link Members to Source Files**
+
+-   **Purpose:** To extend the source linking from types down to their members (`:Method` and `:Field`).
+-   **Process:** For each `:Method` and `:Field`, it traverses to its parent `:Type`, finds the `:SourceFile` linked to that type (via the relationship created in Pass 1), and creates a direct `[:WITH_SOURCE]` relationship from the member to that same file.
+-   **Output:** `:Method` and `:Field` nodes are now directly linked to the file containing their source code, enabling easy code extraction for analysis.
 
 ## 4. Final Output
 

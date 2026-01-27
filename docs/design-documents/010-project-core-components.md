@@ -23,7 +23,8 @@ These components are responsible for specific, high-impact transformations of th
 
 6.  **`GraphNormalizer`**: Executes a series of the most critical normalization passes. Its responsibilities include creating stable `entity_id`s for nodes, adding unambiguous `absolute_path` properties to file-system entities, and establishing the clean `[:CONTAINS_SOURCE]` hierarchy that the summarization process relies on.
 7.  **`SourceFileLinker`**: Bridges the gap between the bytecode-oriented graph from jQAssistant and the project's actual source code. It uses `tree-sitter` to parse `.java` and `.kt` files and creates `[:WITH_SOURCE]` relationships, linking `:Type` nodes to the `:SourceFile` nodes where they are defined.
-8.  **`EntityEmbedder`**: The final component in the RAG pipeline. It is responsible for generating vector embeddings from the final, high-quality summaries. It then stores these embeddings in the graph and ensures a vector index exists in Neo4j, enabling semantic search capabilities.
+8.  **Source Parsers (`JavaSourceParser`, `KotlinSourceParser`)**: These components are critical for extracting metadata from raw source code files. They use `tree-sitter` to parse Java and Kotlin files, identifying package names and Fully Qualified Names (FQNs) of top-level types. This information is then used by the `SourceFileLinker` to establish connections between graph nodes and their corresponding source files.
+9.  **`EntityEmbedder`**: The final component in the RAG pipeline. It is responsible for generating vector embeddings from the final, high-quality summaries. It then stores these embeddings in the graph and ensures a vector index exists in Neo4j, enabling semantic search capabilities.
 
 ## IV. Foundational Utilities
 

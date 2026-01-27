@@ -45,7 +45,7 @@ The system is composed of several key components, each with a distinct role.
 *   **Responsibilities**:
     *   Implement a strategy to query the Neo4j database for all nodes of a specific type. The strategy depends on the node's nature:
         *   **Inheritance Hierarchy Ordering (`TypeSummarizer`)**: This is the most complex strategy. It first performs a graph traversal to map out the entire inheritance hierarchy of source-linked types, grouping them into levels. It then processes types level by level, ensuring base types are summarized before derived types.
-        *   **Depth-First Ordering (`DirectorySummarizer`, `PackageSummarizer`)**: These use a single, efficient Cypher query that orders nodes by their path or FQN depth (deepest first), ensuring children are processed before parents.
+        *   **Depth-Based Level Processing (`DirectorySummarizer`, `PackageSummarizer`)**: These summarizers now explicitly process nodes level by level. They first query all items with their path or FQN depth (deepest first). Then, in their `run()` method, they group these items by depth and iteratively call `process_batch()` for each depth level, starting from the deepest. This ensures that all children at a lower level are summarized before their parent at a higher level is processed.
         *   **Simple Fetch (All others)**: For nodes without strict hierarchical dependencies (like methods or source files), a simple query fetches all items at once.
     *   For each node, gather the element IDs of all its contextual dependencies (e.g., parents, children, callers, callees).
     *   Provide the specific Cypher query for batch-updating its node type.
@@ -145,9 +145,9 @@ To correctly build summaries in a bottom-up fashion, different summarizers emplo
 ### 5.2. Path/FQN Depth Ordering (`DirectorySummarizer`, `PackageSummarizer`)
 
 *   **Goal**: To summarize the most deeply nested directories or packages first, moving progressively upwards.
-*   **Logic**: This strategy offloads the ordering logic to the database, resulting in a very simple and efficient implementation.
-    *   **`DirectorySummarizer`**: A single Cypher query fetches all `:Directory` nodes and orders them using `ORDER BY size(split(d.absolute_path, '/')) DESC`. The database returns a list of directories from the deepest to the shallowest.
-    *   **`PackageSummarizer`**: A similar query fetches all `:Package` nodes and orders them using `ORDER BY size(split(p.fqn, '.')) DESC`.
+*   **Logic**: This strategy now involves a two-step process to ensure correct hierarchical summarization:
+    1.  **Query with Depth**: A Cypher query fetches all relevant nodes (e.g., `:Directory` or `:Package`) along with their calculated depth (based on `absolute_path` or `fqn`). The query orders them from deepest to shallowest.
+    2.  **Level-by-Level Processing**: In the summarizer's `run()` method, these nodes are grouped by their depth. The `process_batch()` method is then iteratively called for each depth level, starting from the deepest. This guarantees that all children at a given level are summarized before their parents at a shallower level are processed, while still allowing parallel execution within each level.
 
 ### 5.3. Single Root Node (`ProjectSummarizer`)
 
