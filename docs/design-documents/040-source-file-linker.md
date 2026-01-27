@@ -2,41 +2,38 @@
 
 ## 1. Purpose and Role
 
-The `SourceFileLinker` is a crucial enrichment component that bridges the gap between the two worlds of the project: the world of compiled bytecode (represented by jQAssistant's graph) and the world of source code (the `.java` and `.kt` files on disk).
+The `SourceFileLinker` is a crucial enrichment component that bridges the gap between the logical graph (e.g., `:Type` nodes) and the physical source code files on disk.
 
-jQAssistant primarily creates `:Type` nodes (like `:Class`, `:Interface`) based on its analysis of `.class` files, and it populates them with a `fqn` (Fully Qualified Name). However, it does not create a reliable, direct link to the source file that defines that type. The `SourceFileLinker`'s job is to create this missing link. It does this by parsing the entire source tree, identifying the FQNs of the types defined in each file, and then creating `[:WITH_SOURCE]` relationships in the graph between the existing `:Type` nodes and the `:File` nodes that represent their source.
+Its primary responsibility is to establish the vital `[:WITH_SOURCE]` relationship. It does this by first using language-specific parsers to analyze the content of source files, extracting the Fully Qualified Names (FQNs) of the types they contain. It then uses this information to create links in the graph from the existing `:Type` and `:Member` nodes to the `:SourceFile` node that defines them.
 
 ## 2. Workflow
 
-1.  **Initialization**: The linker is initialized with a `Neo4jManager` and the project's root `Path`.
-2.  **Source Parsing (`_parse_source_files`)**: The main `run()` method first calls a private method to parse all source files.
+1.  **Initialization**: The linker is initialized with a `Neo4jManager` instance.
+2.  **Source Parsing (`_parse_source_files`)**: The `link_types_to_source_files` pass first calls a private method to parse all source files.
     *   It instantiates `JavaSourceParser` and `KotlinSourceParser`.
-    *   Each parser walks the file system from the project root, finding all files with the relevant extension (`.java` or `.kt`).
-    *   For each source file, it uses the `tree-sitter` library to parse the code into an Abstract Syntax Tree (AST).
-    *   It traverses the AST to find the package declaration and the names of all top-level type declarations (classes, interfaces, enums, etc.).
-    *   It constructs the FQN for each type found.
-    *   The result is a list of metadata dictionaries, where each dictionary contains the file's path and a list of the FQNs it defines.
-3.  **Graph Enrichment (`_enrich_graph`)**:
-    *   The list of source file metadata is passed to this method.
-    *   The method processes the metadata in batches to avoid overwhelming the database with a single massive transaction.
-    *   For each batch, it executes a Cypher query. This query unwinds the metadata, finds the `:File` node matching the source file path, finds the `:Type` nodes matching the FQNs, and then `MERGE`s a `[:WITH_SOURCE]` relationship between them.
+    *   Crucially, each parser **queries the Neo4j graph** for nodes already labeled as `:SourceFile` and retrieves their `absolute_path`. This is a change from the previous design and leverages the pre-processing work done by the `GraphBasicNormalizer`.
+    *   For each source file found, it uses the `tree-sitter` library to parse the code and extract the FQNs of all top-level types.
+    *   The result is a list of metadata dictionaries, where each dictionary contains the file's `absolute_path` and a list of the FQNs it defines.
+3.  **Type Linking (`link_types_to_source_files`)**:
+    *   The list of source file metadata is processed in batches.
+    *   For each batch, it executes a Cypher query that finds the `:SourceFile` node by its `absolute_path`, finds the `:Type` nodes by their FQNs, and then `MERGE`s a `[:WITH_SOURCE]` relationship between them.
+4.  **Member Linking (`link_members_to_source_files`)**:
+    *   This pass executes a separate Cypher query that leverages the newly created relationships. It finds `:Member` nodes, traverses to their declaring `:Type`, follows the `[:WITH_SOURCE]` link to the `:SourceFile`, and creates a direct `[:WITH_SOURCE]` link from the member to the file for convenient access.
 
 ## 3. Key Methods
 
--   `run()`: The main public method that orchestrates the entire linking process.
--   `_parse_source_files()`: Manages the instantiation of the language-specific parsers and aggregates their results.
--   `_enrich_graph(source_metadata)`: Takes the parsed metadata and executes the batched Cypher queries to update the Neo4j graph.
--   **Language Parsers (`JavaSourceParser`, `KotlinSourceParser`)**: These are helper classes that contain the specific `tree-sitter` logic for parsing a single language. They are responsible for the details of AST traversal and FQN construction.
+-   `link_types_to_source_files()`: The public method that orchestrates the parsing and type-linking process.
+-   `link_members_to_source_files()`: The public method that links members to their source files.
+-   `_parse_source_files()`: A private helper that manages the language-specific parsers.
+-   `_enrich_graph_with_types()`: A private helper that executes the batched Cypher queries for type linking.
 
 ## 4. Dependencies
 
--   `neo4j_manager.Neo4jManager`: To write the new `[:WITH_SOURCE]` relationships to the graph.
--   `java_source_parser.JavaSourceParser` & `kotlin_source_parser.KotlinSourceParser`: To perform the actual source code parsing.
--   External `tree-sitter` libraries (`tree-sitter-java`, `tree-sitter-kotlin`): These are the underlying parsing engines.
+-   `neo4j_manager.Neo4jManager`: To read `:SourceFile` nodes and write the new `[:WITH_SOURCE]` relationships.
+-   `java_source_parser.JavaSourceParser` & `kotlin_source_parser.KotlinSourceParser`: To perform the source code parsing.
 
 ## 5. Design Rationale
 
--   **Bridging Two Worlds**: This component is the essential link that makes a source-code-aware analysis possible. Without it, the graph would only represent the compiled structure, and it would be impossible to find the source code for a given method or to generate summaries based on the actual implementation.
--   **Static Analysis with `tree-sitter`**: The use of `tree-sitter` provides a fast, robust, and language-aware way to parse source code. It is much more reliable than using regular expressions and avoids the complexity of a full compilation.
--   **Decoupling Parsing Logic**: The parsing logic is separated into language-specific classes (`JavaSourceParser`, `KotlinSourceParser`). This is a clean design that makes it easy to add support for new languages in the future (e.g., by adding a `PythonSourceParser`) without changing the core `SourceFileLinker` logic.
--   **Batch Processing**: The `_enrich_graph` method processes the updates in batches. This is a crucial performance consideration for large projects with thousands of source files, as it prevents memory issues and transaction timeouts in the database.
+-   **Graph-Driven Parsing**: By querying the graph for `:SourceFile` nodes, the linker is tightly integrated into the overall workflow. It operates on a known set of files that have been explicitly identified as source code, which is more robust and efficient than scanning the entire filesystem.
+-   **Decoupling**: The parsing logic remains cleanly separated into language-specific classes, making the system extensible.
+-   **Batch Processing**: Updates are processed in batches to ensure performance and stability on large projects.

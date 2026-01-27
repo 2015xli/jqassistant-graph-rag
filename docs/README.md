@@ -25,9 +25,11 @@ The whole design of the project is basically based on the idea of orchestrators,
 -   **[030-rag-orchestrator.md](design-documents/030-rag-orchestrator.md)**: Design document for the `RagOrchestrator`, which manages the entire summary and embedding generation pipeline.
 
 ### Graph enrichment and normalization
-The graph processing basically includes two parts: Linking the graph nodes to their corresponding source files and graph enrichment.
+The graph processing pipeline is broken down into modular components, each responsible for a specific phase of enrichment.
 -   **[040-source-file-linker.md](design-documents/040-source-file-linker.md)**: Design document for the `SourceFileLinker`, which links graph nodes to their corresponding source files.
--   **[050-graph-normalizer.md](design-documents/050-graph-normalizer.md)**: Design document for the `GraphNormalizer`, which executes crucial passes to create stable IDs, absolute paths, and a clean graph hierarchy.
+-   **[051-graph-basic-normalizer.md](design-documents/051-graph-basic-normalizer.md)**: Design document for the `GraphBasicNormalizer`, which adds canonical absolute paths and labels source files.
+-   **[052-graph-tree-builder.md](design-documents/052-graph-tree-builder.md)**: Design document for the `GraphTreeBuilder`, which establishes the project's hierarchical structure.
+-   **[053-graph-entity-setter.md](design-documents/053-graph-entity-setter.md)**: Design document for the `GraphEntitySetter`, which creates stable IDs and labels all queryable entities.
 
 ### Graph summarization and embedding
 The graph summarization and embedding has sophisticated design. Especially, it partitions the summarization work into multiple layers and passes. 

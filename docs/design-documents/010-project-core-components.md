@@ -19,15 +19,17 @@ This group forms the heart of the AI-driven summary generation.
 
 ## III. Key Enrichment & Normalization Components
 
-These components are responsible for specific, high-impact transformations of the graph structure.
+These components are responsible for specific, high-impact transformations of the graph structure. They are executed in a precise order by the `GraphOrchestrator`.
 
-6.  **`GraphNormalizer`**: Executes a series of the most critical normalization passes. Its responsibilities include creating stable `entity_id`s for nodes, adding unambiguous `absolute_path` properties to file-system entities, and establishing the clean `[:CONTAINS_SOURCE]` hierarchy that the summarization process relies on.
-7.  **`SourceFileLinker`**: Bridges the gap between the bytecode-oriented graph from jQAssistant and the project's actual source code. It uses `tree-sitter` to parse `.java` and `.kt` files and creates `[:WITH_SOURCE]` relationships, linking `:Type` nodes to the `:SourceFile` nodes where they are defined.
-8.  **Source Parsers (`JavaSourceParser`, `KotlinSourceParser`)**: These components are critical for extracting metadata from raw source code files. They use `tree-sitter` to parse Java and Kotlin files, identifying package names and Fully Qualified Names (FQNs) of top-level types. This information is then used by the `SourceFileLinker` to establish connections between graph nodes and their corresponding source files.
-9.  **`EntityEmbedder`**: The final component in the RAG pipeline. It is responsible for generating vector embeddings from the final, high-quality summaries. It then stores these embeddings in the graph and ensures a vector index exists in Neo4j, enabling semantic search capabilities.
+6.  **`GraphBasicNormalizer`**: Executes the first, foundational passes. It adds a canonical `absolute_path` to all filesystem nodes and applies the `:SourceFile` label to all relevant source code files.
+7.  **`SourceFileLinker`**: Bridges the gap between the logical graph and physical source code. It queries the graph for `:SourceFile` nodes, parses them using `tree-sitter`, and creates `[:WITH_SOURCE]` relationships from `:Type` and `:Member` nodes to their source.
+8.  **`GraphTreeBuilder`**: Establishes the project's hierarchical structure. It creates the root `:Project` node and builds a clean `[:CONTAINS_SOURCE]` tree overlay, representing the physical layout of the source code.
+9.  **`GraphEntitySetter`**: Executes the final normalization pass. It applies the `:Entity` label to all nodes relevant for analysis and generates a stable, unique `entity_id` for each, which is critical for caching.
+10. **Source Parsers (`JavaSourceParser`, `KotlinSourceParser`)**: These components are critical for extracting metadata from raw source code files. They use `tree-sitter` to parse Java and Kotlin files, identifying package names and Fully Qualified Names (FQNs) of top-level types. This information is then used by the `SourceFileLinker` to establish connections between graph nodes and their corresponding source files.
+11. **`EntityEmbedder`**: The final component in the RAG pipeline. It is responsible for generating vector embeddings from the final, high-quality summaries. It then stores these embeddings in the graph and ensures a vector index exists in Neo4j, enabling semantic search capabilities.
 
 ## IV. Foundational Utilities
 
 These are critical support components that encapsulate complex or recurring logic.
 
-9.  **`TokenManager`**: A crucial utility that encapsulates the logic for managing the LLM's context window limitations. It provides methods for counting tokens and, most importantly, for chunking large pieces of text or lists of summaries into appropriately sized pieces for iterative processing.
+12. **`TokenManager`**: A crucial utility that encapsulates the logic for managing the LLM's context window limitations. It provides methods for counting tokens and, most importantly, for chunking large pieces of text or lists of summaries into appropriately sized pieces for iterative processing.

@@ -32,6 +32,7 @@ class MethodAnalyzer(BaseSummarizer):
         WHERE m.firstLineNumber IS NOT NULL AND m.lastLineNumber IS NOT NULL
         RETURN m.entity_id AS id,
                sf.absolute_path AS sourceFilePath,
+               m.signature AS signature,
                m.firstLineNumber AS firstLine,
                m.lastLineNumber AS lastLine,
                m.code_analysis AS db_analysis,
@@ -50,7 +51,7 @@ class MethodAnalyzer(BaseSummarizer):
         Hook to extract the method's source code before processing.
         """
         item['source_code'] = self._extract_method_code_snippet(
-            item['sourceFilePath'], item['firstLine'], item['lastLine']
+            item['sourceFilePath'], item['signature'], item['firstLine'], item['lastLine']
         )
         return item
 
@@ -60,7 +61,7 @@ class MethodAnalyzer(BaseSummarizer):
         """
         return self.node_summary_processor.get_method_code_analysis(item)
 
-    def _extract_method_code_snippet(self, file_path: str, first_line: int, last_line: int) -> Optional[str]:
+    def _extract_method_code_snippet(self, file_path: str, signature: str, first_line: int, last_line: int) -> Optional[str]:
         """
         Reads a source file and extracts the code snippet for a method.
         """
@@ -76,10 +77,10 @@ class MethodAnalyzer(BaseSummarizer):
             end_index = last_line
 
             if not (0 <= start_index < end_index <= len(lines)):
-                logger.warning(f"Invalid line numbers for method in {file_path}: {first_line}-{last_line}. File has {len(lines)} lines.")
-                return None
+                logger.warning(f"Invalid line numbers for method {signature} in {file_path}: {first_line}-{last_line}. File has {len(lines)} lines.")
+                return "".join(lines)
             
             return "".join(lines[start_index:end_index])
         except Exception as e:
-            logger.error(f"Error extracting code snippet from {file_path}: {e}")
+            logger.error(f"Error extracting code snippet for method {signature} from {file_path}: {e}")
             return None

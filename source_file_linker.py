@@ -18,35 +18,51 @@ class SourceFileLinker:
     [:WITH_SOURCE] relationship.
     """
 
-    def __init__(self, neo4j_manager: Neo4jManager, project_path: Path):
+    def __init__(self, neo4j_manager: Neo4jManager):
         self.neo4j_manager = neo4j_manager
-        self.project_path = project_path # Still needed for GraphNormalizer, not for parsers anymore
         logger.info("Initialized SourceFileLinker.")
 
-    def run(self):
+    def link_types_to_source_files(self):
         """
         Executes the full source file linking process: parsing the source
         directory and then updating the graph with the discovered relationships.
         """
-        logger.info("\n--- Starting Pass 001: Source File Linking ---")
+        logger.info("--- Starting Pass: Link Types to Source Files ---")
         try:
             source_metadata = self._parse_source_files()
             if not source_metadata:
                 logger.warning(
                     "No Java or Kotlin source files found or parsed. "
-                    "Skipping source file linking."
+                    "Skipping type linking."
                 )
                 return
 
-            relationships_created = self._enrich_graph(source_metadata)
-            logger.info(
-                f"Successfully created {relationships_created} new [:WITH_SOURCE] "
-                "relationships from Type to File."
-            )
-            logger.info("--- Finished Pass 001 ---")
+            self._enrich_graph_with_types(source_metadata)
+            logger.info("--- Finished Pass: Link Types to Source Files ---")
         except Exception as e:
-            logger.error(f"Pass 001 failed: {e}", exc_info=True)
+            logger.error(f"Type linking pass failed: {e}", exc_info=True)
             raise
+
+    def link_members_to_source_files(self):
+        """
+        Creates [:WITH_SOURCE] relationships directly from
+        :Method and :Field nodes to their corresponding :SourceFile nodes.
+        """
+        logger.info("--- Starting Pass: Link Members to Source Files ---")
+        query = """
+        MATCH (type:Type)-[:DECLARES]->(member:Member)
+        MATCH (type)-[:WITH_SOURCE]->(sourceFile:SourceFile)
+        WITH DISTINCT member, sourceFile
+        MERGE (member)-[r:WITH_SOURCE]->(sourceFile)
+        RETURN count(r) AS relationshipsCreated
+        """
+        result = self.neo4j_manager.execute_write_query(query)
+        relationships_created = result.relationships_created
+        logger.info(
+            f"Created {relationships_created} [:WITH_SOURCE] "
+            "relationships from members to source files."
+        )
+        logger.info("--- Finished Pass: Link Members to Source Files ---")
 
     def _parse_source_files(self) -> List[Dict[str, Any]]:
         """
@@ -54,12 +70,12 @@ class SourceFileLinker:
         """
         all_source_metadata: List[Dict[str, Any]] = []
 
-        java_parser = JavaSourceParser(self.neo4j_manager) # Pass neo4j_manager
-        all_source_metadata.extend(java_parser.parse_project()) # Call parse_project() without args
+        java_parser = JavaSourceParser(self.neo4j_manager)
+        all_source_metadata.extend(java_parser.parse_project())
 
         try:
-            kotlin_parser = KotlinSourceParser(self.neo4j_manager) # Pass neo4j_manager
-            all_source_metadata.extend(kotlin_parser.parse_project()) # Call parse_project() without args
+            kotlin_parser = KotlinSourceParser(self.neo4j_manager)
+            all_source_metadata.extend(kotlin_parser.parse_project())
         except ImportError as e:
             logger.warning(f"Kotlin parsing skipped: {e}")
         except Exception as e:
@@ -67,7 +83,7 @@ class SourceFileLinker:
 
         return all_source_metadata
 
-    def _enrich_graph(self, source_metadata: List[Dict[str, Any]]):
+    def _enrich_graph_with_types(self, source_metadata: List[Dict[str, Any]]):
         """
         Connects :File nodes to :Type nodes based on parsed metadata.
         """
@@ -77,7 +93,7 @@ class SourceFileLinker:
 
         cypher_query = """
         UNWIND $metadata AS file_data
-        MATCH (file:File {fileName: file_data.path})
+        MATCH (file:SourceFile {absolute_path: file_data.path})
         UNWIND file_data.fqns AS type_fqn
         MATCH (type:Type {fqn: type_fqn})
         WHERE type:Class OR type:Interface OR type:Enum
@@ -89,7 +105,7 @@ class SourceFileLinker:
 
         for i in tqdm(
             range(0, len(source_metadata), batch_size),
-            desc="Enriching Neo4j graph",
+            desc="Enriching Neo4j graph with type links",
         ):
             batch = source_metadata[i : i + batch_size]
             try:
@@ -101,5 +117,10 @@ class SourceFileLinker:
                 logger.error(
                     f"Error enriching graph with batch starting at index {i}: {e}"
                 )
+
+        logger.info(
+            f"Successfully created {total_relationships_created} new [:WITH_SOURCE] "
+            "relationships from Type to File."
+        )
 
         return total_relationships_created

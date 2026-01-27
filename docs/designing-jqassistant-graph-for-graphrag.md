@@ -27,71 +27,89 @@ The system operates as a multi-stage pipeline that progressively enriches the in
 
 ### 2.2. Core Components
 
--   **`GraphOrchestrator`:** Executes the initial passes that normalize, structure, and link the raw jQAssistant data.
--   **`SourceFileLinker`:** A component responsible for parsing all source files and creating the explicit link between a `:Type` node and the `:SourceFile` node that defines it.
--   **`GraphNormalizer`:** A component that runs a series of passes to add canonical properties (`absolute_path`, `entity_id`), labels, and relationships (`:CONTAINS_SOURCE`) to the graph, making it robust and unambiguous.
+-   **`GraphOrchestrator`:** The central coordinator that executes the entire sequence of enrichment passes in a defined order.
+-   **`GraphBasicNormalizer`:** The first handler, responsible for adding canonical `absolute_path` properties and labeling `:SourceFile` nodes.
+-   **`SourceFileLinker`:** The second handler, responsible for parsing source files (identified by the normalizer) and creating `[:WITH_SOURCE]` links from types and members to their source files.
+-   **`GraphTreeBuilder`:** The third handler, which creates the root `:Project` node and builds the clean `[:CONTAINS_SOURCE]` source code hierarchy.
+-   **`GraphEntitySetter`:** The final handler, responsible for applying the `:Entity` label and generating the stable `entity_id` for all relevant nodes.
 
 ## 3. The Enrichment Pipeline: A Detailed Pass Design
 
-The enrichment process is broken down into sequential passes, where each pass builds upon the data created by the previous ones. These are all managed by the `GraphOrchestrator`.
+The enrichment process is broken down into four sequential phases, where each phase builds upon the data created by the previous ones. These are all managed by the `GraphOrchestrator`.
 
 ---
 
-### **Pass 1: Source File Linking (`SourceFileLinker`)**
+### **Phase 1: Basic Normalization (`GraphBasicNormalizer`)**
 
--   **Purpose:** To connect abstract code entities (`:Type` nodes) to the physical files (`:File` nodes) where they are defined.
--   **Process:**
-    1.  It queries Neo4j to find all `:Artifact:Directory` nodes and the `:File` nodes they `[:CONTAINS]` that represent `.java` or `.kt` source files (excluding `:Directory` nodes).
-    2.  For each identified source file, it constructs its absolute path on disk and passes it, along with its relative path in the graph, to language-specific parsers (`JavaSourceParser`, `KotlinSourceParser`).
-    3.  The parsers use `tree-sitter` to parse the file content and extract the package name and Fully Qualified Names (FQNs) of all top-level types declared within it.
-    4.  Finally, it executes a Cypher query to find the `:Type` node for each FQN and the `:File` node for the corresponding file path, then creates a `[:WITH_SOURCE]` relationship from the `:Type` node to its containing `:File` node.
--   **Output:** A graph where `:Type` nodes are directly linked to the `:File` nodes that contain their source code.
+This phase lays the essential groundwork for all other passes.
 
----
-
-### **Pass 2: Graph Normalization (`GraphNormalizer`)**
-
-The `GraphNormalizer` executes several sub-passes in sequence:
-
-#### **2a. Create Project Root**
-
--   **Purpose:** To create a single root `:Project` node for the entire analysis.
--   **Process:** Merges a single `:Project` node into the graph, using the project directory's name and absolute path.
-
-#### **2b. Normalize Paths**
+#### **1a. Add Absolute Paths**
 
 -   **Purpose:** To standardize all file paths with a canonical `absolute_path` property.
 -   **Process:**
-    1.  Identifies directory-based `:Artifact` nodes and labels them as `:Entry` points.
-    2.  For all `:File` and `:Directory` nodes contained within an `:Entry` node, it constructs an `absolute_path` by concatenating the entry's absolute path with the node's own relative `fileName`.
+    1.  Sets the `absolute_path` on `:Artifact:Directory` nodes to equal their `fileName`.
+    2.  For all `:File` and `:Directory` nodes contained within an artifact, it constructs an `absolute_path` by concatenating the artifact's absolute path with the node's own relative `fileName`.
 -   **Output:** A graph with consistent, absolute paths on all file-system-related nodes, resolving the ambiguity of jQAssistant's `fileName` property.
 
-#### **2c. Identify and Label Source Files**
+#### **1b. Label Source Files**
 
 -   **Purpose:** To explicitly label files that contain source code.
 -   **Process:** Finds all `:File` nodes whose `absolute_path` ends with `.java` or `.kt` and adds a `:SourceFile` label to them.
--   **Output:** `:File` nodes for source code are now also labeled as `:SourceFile`.
+-   **Output:** `:File` nodes for source code are now also labeled as `:SourceFile`, making them easy to query.
 
-#### **2d. Identify Entities and Create Stable IDs**
+---
+
+### **Phase 2: Source Code Integration (`SourceFileLinker`)**
+
+With paths and source files clearly identified, this phase connects the logical graph to the physical source code.
+
+#### **2a. Link Types to Source Files**
+
+-   **Purpose:** To connect abstract code entities (`:Type` nodes) to the physical files (`:SourceFile` nodes) where they are defined.
+-   **Process:**
+    1.  It queries Neo4j to find all nodes with the `:SourceFile` label.
+    2.  It passes the `absolute_path` of each `:SourceFile` to language-specific parsers (`JavaSourceParser`, `KotlinSourceParser`).
+    3.  The parsers use `tree-sitter` to extract the Fully Qualified Names (FQNs) of all top-level types declared within each file.
+    4.  Finally, it executes a Cypher query to create a `[:WITH_SOURCE]` relationship from each `:Type` node (matched by FQN) to its containing `:SourceFile` node (matched by `absolute_path`).
+-   **Output:** A graph where `:Type` nodes are directly linked to the `:SourceFile` nodes that contain their source code.
+
+#### **2b. Link Members to Source Files**
+
+-   **Purpose:** To extend the source linking from types down to their members (`:Method` and `:Field`).
+-   **Process:** For each `:Method` and `:Field`, it traverses to its parent `:Type`, finds the `:SourceFile` linked to that type, and creates a direct `[:WITH_SOURCE]` relationship from the member to that same file.
+-   **Output:** `:Method` and `:Field` nodes are now directly linked to the file containing their source code, enabling easy code extraction for analysis.
+
+---
+
+### **Phase 3: Hierarchical Structure (`GraphTreeBuilder`)**
+
+This phase builds a clean, traversable hierarchy for the project.
+
+#### **3a. Create Project Root**
+
+-   **Purpose:** To create a single root `:Project` node for the entire analysis.
+-   **Process:** Auto-detects the project root from `:Artifact:Directory` nodes, merges a single `:Project` node into the graph, and links all `:Artifact` nodes to it.
+
+#### **3b. Establish Direct Source Hierarchy**
+
+-   **Purpose:** To create a clean, traversable file-system hierarchy for the source code.
+-   **Process:** Creates `[:CONTAINS_SOURCE]` relationships to form a tree from the `:Project` node down through `:Directory` nodes to other `:Directory` and `:SourceFile` nodes. This is done level-by-level from the bottom up to ensure correctness.
+-   **Output:** A browsable source code hierarchy using a single, clear relationship type.
+
+---
+
+### **Phase 4: Entity Identification (`GraphEntitySetter`)**
+
+This is the final normalization pass before summarization can begin.
+
+#### **4a. Identify Entities and Create Stable IDs**
 
 -   **Purpose:** To assign a stable, unique, and deterministic identifier to every node that will be part of the RAG process. This ID is essential for caching and dependency tracking.
 -   **Process:**
     1.  Ensures a database uniqueness constraint exists for `(:Entity {entity_id})`.
     2.  Adds the `:Entity` label to all relevant nodes (`:Project`, `:Artifact`, `:File`, `:Type`, `:Member`, etc.).
-    3.  Generates an `entity_id` for each `:Entity` node. This ID is an MD5 hash of a composite key that guarantees uniqueness. For example, for a `:Type` node, the key is `"{Artifact.fileName} + {Node.fileName}"`.
+    3.  Generates an `entity_id` for each `:Entity` node. This ID is an MD5 hash of a composite key that guarantees uniqueness (e.g., `"{Artifact.fileName} + {Node.fileName}"`).
 -   **Output:** All relevant nodes are labeled `:Entity` and have a unique, stable `entity_id` property.
-
-#### **2e. Establish Direct Source Hierarchy**
-
--   **Purpose:** To create a clean, traversable file-system hierarchy for the source code.
--   **Process:** Creates `[:CONTAINS_SOURCE]` relationships to form a tree from the `:Project` node down through `:Directory` nodes to other `:Directory` and `:SourceFile` nodes. This pass now processes directories level by level, from the deepest to the shallowest. For each level, it first links directories to their direct `:SourceFile` children and then links directories to their direct `:Directory` children. This level-by-level approach ensures that all child relationships are established before a parent attempts to link to them, preventing inconsistencies and providing a robust tree structure for hierarchical summarization.
--   **Output:** A browsable source code hierarchy using a single, clear relationship type.
-
-#### **2f. Link Members to Source Files**
-
--   **Purpose:** To extend the source linking from types down to their members (`:Method` and `:Field`).
--   **Process:** For each `:Method` and `:Field`, it traverses to its parent `:Type`, finds the `:SourceFile` linked to that type (via the relationship created in Pass 1), and creates a direct `[:WITH_SOURCE]` relationship from the member to that same file.
--   **Output:** `:Method` and `:Field` nodes are now directly linked to the file containing their source code, enabling easy code extraction for analysis.
 
 ## 4. Final Output
 

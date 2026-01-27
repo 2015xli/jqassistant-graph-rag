@@ -1,80 +1,57 @@
 import logging
-import os
 from neo4j_manager import Neo4jManager
-from graph_normalizer import GraphNormalizer
+from graph_basic_normalizer import GraphBasicNormalizer
 from source_file_linker import SourceFileLinker
-from pathlib import Path
+from graph_tree_builder import GraphTreeBuilder
+from graph_entity_setter import GraphEntitySetter
 
 logger = logging.getLogger(__name__)
 
 
 class GraphOrchestrator:
     """
-    Manages and executes the sequence of enrichment passes.
-    It determines the project's root path and then runs the necessary
-    enrichment components in the correct order.
+    Manages and executes the sequence of graph normalization and enrichment passes.
     """
 
     def __init__(self, neo4j_manager: Neo4jManager):
         self.neo4j_manager = neo4j_manager
-        self.project_path = self._determine_project_root()
-        self.project_name = self.project_path.name
-        logger.info(
-            f"Initialized GraphOrchestrator for project: {self.project_name}"
-        )
-
-    def _determine_project_root(self) -> Path:
-        """
-        Auto-detects the project's root path from the graph by finding the
-        common path of all directory-based :Artifact nodes.
-        """
-        logger.info("Auto-detecting project path from graph artifacts...")
-        query = """
-        MATCH (a:Artifact:Directory)
-        WHERE a.fileName IS NOT NULL
-        RETURN a.fileName AS path
-        """
-        results = self.neo4j_manager.execute_read_query(query)
-
-        artifact_paths = [
-            res["path"] for res in results if res and res.get("path")
-        ]
-        if not artifact_paths:
-            raise ValueError(
-                "Could not auto-detect project path. No directory-based :Artifact "
-                "nodes with 'fileName' property found in the graph."
-            )
-
-        project_path_str = os.path.commonpath(artifact_paths)
-        logger.info(f"Auto-detected project path: {project_path_str}")
-
-        project_path = Path(project_path_str).resolve()
-        if not project_path.is_dir():
-            raise ValueError(
-                f"Auto-detected project path '{project_path}' is not a valid directory."
-            )
-        return project_path
+        self.project_path = None
+        logger.info("Initialized GraphOrchestrator.")
 
     def run_enrichment_passes(self):
         """
         Executes the full sequence of graph enrichment passes by instantiating
-        and running the necessary components in order.
+        and running the necessary components in the correct logical order.
         """
-        logger.info(
-            f"--- Starting All Enrichment Passes for project: {self.project_name} ---"
-        )
+        logger.info("--- Starting All Graph Enrichment and Normalization Passes ---")
 
-        # Step 1: Link source files to the graph
-        source_linker = SourceFileLinker(self.neo4j_manager, self.project_path)
-        source_linker.run()
+        # Instantiate all the specialized handlers
+        basic_normalizer = GraphBasicNormalizer(self.neo4j_manager)
+        source_linker = SourceFileLinker(self.neo4j_manager)
+        tree_builder = GraphTreeBuilder(self.neo4j_manager)
+        entity_setter = GraphEntitySetter(self.neo4j_manager)
 
-        # Step 2: Run all graph normalization passes
-        graph_normalizer = GraphNormalizer(self.neo4j_manager, self.project_path)
-        graph_normalizer.run_all_passes()
+        # --- Phase 1: Basic Normalization ---
+        # Add absolute paths and label source files first. This is a prerequisite
+        # for almost all subsequent passes.
+        basic_normalizer.add_absolute_paths()
+        basic_normalizer.label_source_files()
 
-        logger.info(
-            f"--- All Enrichment Passes for project: {self.project_name} Complete ---"
-        )
+        # --- Phase 2: Source Code Integration ---
+        # With source files clearly labeled, we can now link types and members
+        # to their on-disk source code.
+        source_linker.link_types_to_source_files()
+        source_linker.link_members_to_source_files()
 
+        # --- Phase 3: Hierarchical Structure Establishment ---
+        # Now that the graph is normalized and linked, build the clean
+        # hierarchical overlay for the project.
+        self.project_path = tree_builder.create_project_node()
+        tree_builder.establish_source_hierarchy()
 
-    
+        # --- Phase 4: Entity and ID Generation ---
+        # As the final step, label all relevant nodes as :Entity and generate
+        # their stable, unique IDs for future processing.
+        entity_setter.create_entities_and_stable_ids()
+
+        logger.info("--- All Graph Enrichment and Normalization Passes Complete ---")

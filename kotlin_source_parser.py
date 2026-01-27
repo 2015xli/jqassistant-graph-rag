@@ -27,7 +27,7 @@ class KotlinSourceParser:
         self.neo4j_manager = neo4j_manager # Store neo4j_manager
         logger.info("Initialized KotlinSourceParser.")
 
-    def _get_kotlin_file_metadata(self, absolute_disk_path: Path, file_relative_path_in_graph: str) -> Dict[str, Any]:
+    def _get_kotlin_file_metadata(self, absolute_disk_path: str) -> Dict[str, Any]:
         """
         Parses a .kt file and returns a dictionary with package and top-level types (FQNs).
         Handles Kotlin's synthetic "Kt" class naming convention.
@@ -63,7 +63,7 @@ class KotlinSourceParser:
                 fqns.append(f"{prefix}{type_name}")
 
             if has_top_level_members:
-                base_name = os.path.splitext(absolute_disk_path.name)[0]
+                base_name = os.path.splitext(os.path.basename(absolute_disk_path))[0]
                 virtual_class_simple_name = f"{base_name.capitalize()}Kt"
                 fqns.append(f"{prefix}{virtual_class_simple_name}")
 
@@ -71,14 +71,14 @@ class KotlinSourceParser:
                 fqns.append(package_name)
 
             return {
-                "path": file_relative_path_in_graph,
+                "path": absolute_disk_path,
                 "package": package_name,
                 "fqns": fqns
             }
         except Exception as e:
             logger.error(f"Error reading or processing Kotlin file {absolute_disk_path}: {e}")
             return {
-                "path": file_relative_path_in_graph,
+                "path": absolute_disk_path,
                 "package": "",
                 "fqns": [],
                 "error": str(e)
@@ -89,23 +89,18 @@ class KotlinSourceParser:
         Queries Neo4j for Kotlin source files, parses them, and returns their metadata.
         """
         query = """
-        MATCH (a:Artifact:Directory)-[:CONTAINS]->(f:File)
-        WHERE (NOT f:Directory) AND (f.fileName ENDS WITH '.kt') 
-        RETURN a.fileName AS artifactAbsolutePath, f.fileName AS fileRelativePath
+        MATCH (f:SourceFile)
+        WHERE f.absolute_path ENDS WITH '.kt'
+        RETURN f.absolute_path AS absolutePath
         """
         kotlin_files_in_graph = self.neo4j_manager.execute_read_query(query)
 
-        files_to_parse_info = []
-        for record in kotlin_files_in_graph:
-            artifact_abs_path = record["artifactAbsolutePath"]
-            file_rel_path = record["fileRelativePath"]
-            absolute_disk_path = Path(os.path.join(artifact_abs_path, file_rel_path.lstrip('/')))
-            files_to_parse_info.append((absolute_disk_path, file_rel_path))
+        files_to_parse = [record["absolutePath"] for record in kotlin_files_in_graph]
 
         all_kotlin_metadata = []
-        logger.info(f"Parsing {len(files_to_parse_info)} Kotlin files from graph query.")
-        for absolute_disk_path, file_relative_path_in_graph in files_to_parse_info:
-            metadata = self._get_kotlin_file_metadata(absolute_disk_path, file_relative_path_in_graph)
+        logger.info(f"Parsing {len(files_to_parse)} Kotlin files from graph query.")
+        for path in files_to_parse:
+            metadata = self._get_kotlin_file_metadata(path)
             if metadata:
                 all_kotlin_metadata.append(metadata)
         logger.info(f"Finished parsing. Found metadata for {len(all_kotlin_metadata)} Kotlin files.")
