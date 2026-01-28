@@ -1,0 +1,102 @@
+## Node Properties:
+  (:Project) 
+    //There is only one :Project node as the root entry of the whole graph. It connects source tree through [:CONTAINs_SOURCE] relationship, and connects package/class tree through [:CONTAINS_CLASS] relationshp.
+    entity_id: STRING (UNIQUE)
+    name: STRING
+    absolute_path: STRING
+    summary: STRING
+    summaryEmbedding: LIST
+
+  (:Directory)
+    //Nodes for the source tree directories. Directory nodes connect their sub-directory/file nodes through [:CONTAINS_SOURCE] nodes.
+    entity_id: STRING (UNIQUE)
+    absolute_path: STRING
+    summary: STRING
+    summaryEmbedding: LIST
+
+  (:SourceFile)
+    //Nodes for the source files in Java/Kotlin
+    entity_id: STRING (UNIQUE)
+    absolute_path: STRING
+    summary: STRING
+    summaryEmbedding: LIST
+
+  (:ClassTree)
+    //Nodes for the roots of package/class trees. One project may have multiple package/class trees, e.g., for different jars. :ClassTree nodes connect their sub-package/class tree nodes through [:CONTAINS_CLASS] relationship.
+    entity_id: STRING (UNIQUE)
+    absolute_path: STRING
+    summary: STRING
+    summaryEmbedding: LIST
+
+  (:Package)
+    //Nodes for the packages under a ClassTree. Package nodes connect their sub-package/class nodes through [:CONTAINS_CLASS] relationship.
+    entity_id: STRING (UNIQUE)
+    fqn: STRING
+    summary: STRING
+    summaryEmbedding: LIST
+
+  (:Class | :Interface | :Enum)
+    //Nodes under packages. They all have :Type label. They connect with their :Member nodes (:Method, :Field) through [:DECLARES] relationship, and connect their source file through [:WITH_SOURCE] relationship.
+    entity_id: STRING (UNIQUE)
+    fqn: STRING
+    summary: STRING
+    summaryEmbedding: LIST
+
+  (:Type)
+    //Nodes of :Class, :Interface, :Enum have also :Type label. They extends/implements other :Types with [:EXTENDS] and [:IMPLEMENTS] relationships.
+
+  (:Method)
+    //Nodes of :Type's member methods. They connect their callee methods through [:INVOKES] relationship, and connect their source file through [:WITH_SOURCE] relationship.
+    entity_id: STRING (UNIQUE)
+    name: STRING
+    signature: STRING
+    summary: STRING
+    summaryEmbedding: LIST
+
+  (:Field)
+    //Nodes of :Type's member fields. They connect their source file through [:WITH_SOURCE] relationship.
+    entity_id: STRING (UNIQUE)
+    name: STRING
+    signature: STRING
+    summary: STRING
+
+  (:Member)
+    :Method and :Field nodes have also :Member label
+
+## Relationships:
+  (:Project) -[:CONTAINS_SOURCE]-> (:Directory)
+  (:Project) -[:CONTAINS_CLASS]-> (:ClassTree)
+
+  (:Directory) -[:CONTAINS_SOURCE]-> (:Directory)
+  (:Directory) -[:CONTAINS_SOURCE]-> (:SourceFile)
+
+  (:ClassTree) -[:CONTAINS_CLASS]-> (:Package)
+  (:Package) -[:CONTAINS_CLASS]-> (:Package)
+  (:Package) -[:CONTAINS_CLASS]-> (:Class | :Interface | :Enum)
+
+  (:Class | :Interface | :Enum) -[:DECLARES]-> (:Method | :Field)
+  (:Class | :Interface) -[:EXTENDS]-> (:Class | :Interface)
+  (:Class) -[:IMPLEMENTS]-> (:Interface)
+
+  (:Method) -[:INVOKES]-> (:Method)
+
+  (:Class | :Interface | :Enum) -[:WITH_SOURCE]-> (:SourceFile)
+  (:Method | :Field) -[:WITH_SOURCE]-> (:SourceFile)
+
+## Condensed form of Relationships:
+  (:Project) -[:CONTAINS_SOURCE]-> (:Directory)
+  (:Directory) -[:CONTAINS_SOURCE]-> (:Directory | :SourceFile)
+  (:Project) -[:CONTAINS_CLASS]-> (:ClassTree)
+  (:ClassTree | :Package) -[:CONTAINS_CLASS]-> (:Package | :Type)
+  (:Type) -[:DECLARES]-> (:Member)
+  (:Type) -[:EXTENDS|:IMPLEMENTS]-> (:Type)
+  (:Method) -[:INVOKES]-> (:Method)
+  (:Type | :Member) -[:WITH_SOURCE]-> (:SourceFile)
+
+## Property Explanations:
+  entity_id: A stable, globally unique identifier for the node. 
+  absolute_path: The full, unambiguous path to a file or directory on the filesystem. Use this for reading file contents.
+  fqn: The Fully Qualified Name for a package or type (e.g., "java.util.List"). Use this to query for specific packages or classes.
+  signature: The unique signature of a method or field within its declaring type.
+  summary: A summary of the node's purpose and role.  
+  summaryEmbedding: A vector embedding of the 'summary' property, used for semantic similarity searches.

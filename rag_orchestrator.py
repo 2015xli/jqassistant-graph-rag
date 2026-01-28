@@ -37,7 +37,6 @@ class RagOrchestrator:
         self.type_summarizer = TypeSummarizer(neo4j_manager, self.node_summary_processor)
         self.source_file_summarizer = SourceFileSummarizer(neo4j_manager, self.node_summary_processor)
         self.directory_summarizer = DirectorySummarizer(neo4j_manager, self.node_summary_processor)
-        #TODO: how to use the summary of package? how to determine the boundary of package directory?
         self.package_summarizer = PackageSummarizer(neo4j_manager, self.node_summary_processor)
         self.project_summarizer = ProjectSummarizer(neo4j_manager, self.node_summary_processor)
         self.entity_embedder = EntityEmbedder(neo4j_manager, self.embedding_client)
@@ -58,8 +57,7 @@ class RagOrchestrator:
             self.type_summarizer.run()
             self.source_file_summarizer.run()
             self.directory_summarizer.run()
-            #TODO: how to use the summary of package? how to determine the boundary of package directory?
-            #self.package_summarizer.run()
+            self.package_summarizer.run()
             self.project_summarizer.run()
             self.entity_embedder.add_entity_labels_and_embeddings()
 

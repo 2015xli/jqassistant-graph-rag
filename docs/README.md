@@ -30,6 +30,7 @@ The graph processing pipeline is broken down into modular components, each respo
 -   **[051-graph-basic-normalizer.md](design-documents/051-graph-basic-normalizer.md)**: Design document for the `GraphBasicNormalizer`, which adds canonical absolute paths and labels source files.
 -   **[052-graph-tree-builder.md](design-documents/052-graph-tree-builder.md)**: Design document for the `GraphTreeBuilder`, which establishes the project's hierarchical structure.
 -   **[053-graph-entity-setter.md](design-documents/053-graph-entity-setter.md)**: Design document for the `GraphEntitySetter`, which creates stable IDs and labels all queryable entities.
+-   **[054-package-data-normalizer.md](design-documents/054-package-data-normalizer.md)**: Design document for the `PackageDataNormalizer`, which validates package structures and builds a clean class hierarchy.
 
 ### Graph summarization and embedding
 The graph summarization and embedding has sophisticated design. Especially, it partitions the summarization work into multiple layers and passes. 
@@ -42,6 +43,7 @@ The graph summarization and embedding has sophisticated design. Especially, it p
 
 #### Summarization layers
 -   **[060-base-summarizer.md](design-documents/060-base-summarizer.md)**: Design document for the `BaseSummarizer` abstract class, which provides a reusable framework for all summarization passes.
+-   **[061-package-summarizer.md](design-documents/061-package-summarizer.md)**: Design document for the `PackageSummarizer`, which generates summaries for validated package structures.
 -   **[070-node-summary-processor.md](design-documents/070-node-summary-processor.md)**: Design document for the `NodeSummaryProcessor`, the core logic for processing individual nodes for summarization.
 -   **[080-summary-cache-manager.md](design-documents/080-summary-cache-manager.md)**: Design document for the `SummaryCacheManager`, responsible for managing the on-disk cache for summaries and content hashes.
 

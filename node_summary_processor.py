@@ -461,3 +461,101 @@ class NodeSummaryProcessor:
             }
 
         return None
+
+    def get_project_summary(
+        self, node_data: Dict[str, Any]
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Processor for the :Project node, which uses a dual context from both
+        source and class hierarchies.
+        """
+        node_id = node_data["id"]
+        db_summary = node_data.get("db_summary")
+        source_deps = node_data.get("source_deps", [])
+        class_deps = node_data.get("class_deps", [])
+        dependency_ids = source_deps + class_deps
+
+        is_stale = self.cache_manager.was_dependency_changed(dependency_ids)
+
+        if db_summary and not is_stale:
+            return {"status": "unchanged", "id": node_id, "summary": db_summary}
+
+        cached_summary = self.cache_manager.get_node_cache(node_id).get("summary")
+        if cached_summary and not is_stale:
+            return {"status": "restored", "id": node_id, "summary": cached_summary}
+
+        # Regenerate: Fetch summaries for both contexts
+        source_summaries = [
+            self.cache_manager.get_node_cache(dep_id).get("summary")
+            for dep_id in source_deps
+        ]
+        source_summaries = [s for s in source_summaries if s]
+
+        class_summaries = [
+            self.cache_manager.get_node_cache(dep_id).get("summary")
+            for dep_id in class_deps
+        ]
+        class_summaries = [s for s in class_summaries if s]
+
+        full_context = " ".join(source_summaries + class_summaries)
+        if (
+            self.token_manager.get_token_count(full_context)
+            < self.token_manager.max_context_token_size
+        ):
+            prompt = self.prompt_manager.get_project_summary_prompt(
+                node_data["name"], "; ".join(source_summaries), "; ".join(class_summaries)
+            )
+            new_summary = self.llm_client.generate_summary(prompt)
+        else:
+            logger.info(
+                f"Context for project '{node_data['name']}' is too large, "
+                "starting iterative summarization..."
+            )
+            new_summary = self._summarize_project_context_iteratively(
+                node_data["name"], source_summaries, class_summaries
+            )
+
+        if new_summary:
+            return {"status": "regenerated", "id": node_id, "summary": new_summary}
+
+        return None
+
+    def _summarize_project_context_iteratively(
+        self,
+        project_name: str,
+        source_summaries: List[str],
+        class_summaries: List[str],
+    ) -> Optional[str]:
+        """
+        Generates a project summary by iteratively folding in source and class context.
+        """
+        running_summary = (
+            "**Source Code Overview:**\nAn overview of the project's source code will be generated here.\n\n"
+            "**Package and Dependency Overview:**\nAn overview of the project's dependencies will be generated here."
+        )
+
+        # Stage 1: Iterate over Source Context
+        source_chunks = self.token_manager.chunk_summaries_by_tokens(source_summaries)
+        for i, chunk in enumerate(source_chunks):
+            prompt = self.prompt_manager.get_iterative_project_summary_prompt(
+                project_name, running_summary, chunk, "source"
+            )
+            new_summary = self.llm_client.generate_summary(prompt)
+            if not new_summary:
+                logger.error(f"Iterative project summary (source) failed at chunk {i+1}.")
+                return None
+            running_summary = new_summary
+
+        # Stage 2: Iterate over Class Context
+        class_chunks = self.token_manager.chunk_summaries_by_tokens(class_summaries)
+        for i, chunk in enumerate(class_chunks):
+            prompt = self.prompt_manager.get_iterative_project_summary_prompt(
+                project_name, running_summary, chunk, "class"
+            )
+            new_summary = self.llm_client.generate_summary(prompt)
+            if not new_summary:
+                logger.error(f"Iterative project summary (class) failed at chunk {i+1}.")
+                return None
+            running_summary = new_summary
+
+        return running_summary

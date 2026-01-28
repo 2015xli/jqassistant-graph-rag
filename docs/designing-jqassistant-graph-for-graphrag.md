@@ -31,11 +31,12 @@ The system operates as a multi-stage pipeline that progressively enriches the in
 -   **`GraphBasicNormalizer`:** The first handler, responsible for adding canonical `absolute_path` properties and labeling `:SourceFile` nodes.
 -   **`SourceFileLinker`:** The second handler, responsible for parsing source files (identified by the normalizer) and creating `[:WITH_SOURCE]` links from types and members to their source files.
 -   **`GraphTreeBuilder`:** The third handler, which creates the root `:Project` node and builds the clean `[:CONTAINS_SOURCE]` source code hierarchy.
+-   **`PackageDataNormalizer`:** A critical handler that validates package structures from compiled class files, corrects `fqn` properties, and builds a second clean hierarchy for packages using the `[:CONTAINS_CLASS]` relationship.
 -   **`GraphEntitySetter`:** The final handler, responsible for applying the `:Entity` label and generating the stable `entity_id` for all relevant nodes.
 
 ## 3. The Enrichment Pipeline: A Detailed Pass Design
 
-The enrichment process is broken down into four sequential phases, where each phase builds upon the data created by the previous ones. These are all managed by the `GraphOrchestrator`.
+The enrichment process is broken down into five sequential phases, where each phase builds upon the data created by the previous ones. These are all managed by the `GraphOrchestrator`.
 
 ---
 
@@ -83,7 +84,7 @@ With paths and source files clearly identified, this phase connects the logical 
 
 ### **Phase 3: Hierarchical Structure (`GraphTreeBuilder`)**
 
-This phase builds a clean, traversable hierarchy for the project.
+This phase builds a clean, traversable hierarchy for the project's source code.
 
 #### **3a. Create Project Root**
 
@@ -98,11 +99,32 @@ This phase builds a clean, traversable hierarchy for the project.
 
 ---
 
-### **Phase 4: Entity Identification (`GraphEntitySetter`)**
+### **Phase 4: Package Data Normalization (`PackageDataNormalizer`)**
+
+This new phase builds a second, parallel hierarchy for the project's compiled class and package structure.
+
+#### **4a. Identify and Validate Package Trees**
+
+-   **Purpose:** To find reliable package structures within the graph, correcting the often-ambiguous `fqn` property on directories.
+-   **Process:**
+    1.  First, it labels all `:Jar:Artifact` nodes as `:ClassTree`, as they are a reliable source of package structure.
+    2.  Then, for each `:Directory:Artifact`, it uses a heuristic to find potential package structures. It finds a deeply nested `:Class` file, uses its correct `fqn` to infer the package path, and validates this path by walking up the directory tree.
+    3.  If a structure is validated, its root directory is also labeled `:ClassTree`, and the `fqn` properties of all its sub-directories are corrected.
+-   **Output:** A set of `:ClassTree` nodes that act as the roots of valid package hierarchies.
+
+#### **4b. Establish Direct Class Hierarchy**
+
+-   **Purpose:** To create a clean, traversable hierarchy for the package and class structure.
+-   **Process:** Creates `[:CONTAINS_CLASS]` relationships to form a tree from the `:Project` node down through `:ClassTree` and `:Package` nodes to `:Type` nodes. This is also done level-by-level from the bottom up.
+-   **Output:** A second, browsable hierarchy parallel to the source tree, representing the project's compiled and dependency structure.
+
+---
+
+### **Phase 5: Entity Identification (`GraphEntitySetter`)**
 
 This is the final normalization pass before summarization can begin.
 
-#### **4a. Identify Entities and Create Stable IDs**
+#### **5a. Identify Entities and Create Stable IDs**
 
 -   **Purpose:** To assign a stable, unique, and deterministic identifier to every node that will be part of the RAG process. This ID is essential for caching and dependency tracking.
 -   **Process:**
@@ -113,4 +135,4 @@ This is the final normalization pass before summarization can begin.
 
 ## 4. Final Output
 
-The output of this entire pipeline is a **Normalized Graph**. This graph has a clear structure, unambiguous paths, stable identifiers, and direct links between the logical and physical code structures. It is the required input for the next stage of the system: the RAG generation pipeline, which is responsible for summarization and embedding.
+The output of this entire pipeline is a **Normalized Graph**. This graph has a clear structure with two parallel hierarchies (`[:CONTAINS_SOURCE]` and `[:CONTAINS_CLASS]`), unambiguous paths, stable identifiers, and direct links between the logical and physical code structures. It is the required input for the next stage of the system: the RAG generation pipeline, which is responsible for summarization and embedding.

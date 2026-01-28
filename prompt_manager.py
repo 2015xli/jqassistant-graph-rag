@@ -214,3 +214,62 @@ Summary:
             "Provide a new, single-paragraph summary. Do not respond with "
             "your reasoning process, only the summary."
         )
+
+    def get_project_summary_prompt(
+        self, project_name: str, source_context: str, class_context: str
+    ) -> str:
+        """
+        Generates a prompt for a dual-context project summary.
+        """
+        prompt = (
+            f"Provide a high-level summary for the project named '{project_name}'. "
+            "Structure your response in two distinct paragraphs as follows:\n\n"
+            "**Source Code Overview:**\n"
+            "Based on the summaries of its main source directories, describe the "
+            "core purpose and functionality of the project's own source code. "
+            "This is the context from the source code:\n"
+            f"[{source_context}]\n\n"
+        )
+
+        if class_context:
+            prompt += (
+                "**Package and Dependency Overview:**\n"
+                "Based on the summaries of its compiled packages and dependencies (JARs), "
+                "describe the key libraries, frameworks, and external components the "
+                "project relies on. This is the context from its dependencies:\n"
+                f"[{class_context}]"
+            )
+        
+        prompt += "\n\nDo not respond with your reasoning process, only the two-paragraph summary."
+        return prompt
+
+    def get_iterative_project_summary_prompt(
+        self,
+        project_name: str,
+        running_summary: str,
+        context_chunk: str,
+        context_type: str,
+    ) -> str:
+        """
+        Generates a prompt for iteratively refining a project summary.
+        """
+        if context_type == "source":
+            return (
+                f"The summary for the project '{project_name}' so far is: '{running_summary}'.\n"
+                "Here is a new chunk of context from its source code directories: "
+                f"[{context_chunk}].\n\n"
+                "Refine the 'Source Code Overview' paragraph of the summary based on this new information. "
+                "Provide a new, complete two-paragraph summary, enhancing the first paragraph and preserving the second if it exists. "
+                "Do not respond with your reasoning process, only the summary."
+            )
+        elif context_type == "class":
+            return (
+                f"The summary for the project '{project_name}' so far is: '{running_summary}'.\n"
+                "Here is a new chunk of context from its packages and dependencies: "
+                f"[{context_chunk}].\n\n"
+                "Add or refine the 'Package and Dependency Overview' paragraph of the summary based on this new information. "
+                "Provide a new, complete two-paragraph summary, preserving the first paragraph and enhancing the second. "
+                "Do not respond with your reasoning process, only the summary."
+            )
+        else:
+            raise ValueError(f"Unknown context_type for project summary: {context_type}")

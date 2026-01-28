@@ -39,17 +39,23 @@ class ProjectSummarizer(BaseSummarizer):
 
     def _get_project_with_context(self) -> List[Dict[str, Any]]:
         """
-        Fetches the project node and the context of its direct children.
+        Fetches the project node and the context of its direct children from
+        both the source and class hierarchies.
         """
         query = """
         MATCH (p:Project)
-        // Gather context from top-level directories or packages
-        OPTIONAL MATCH (p)-[:CONTAINS_SOURCE]->(child)
+        // Gather context from top-level source directories
+        OPTIONAL MATCH (p)-[:CONTAINS_SOURCE]->(source_child)
+        WITH p, collect(DISTINCT source_child.entity_id) AS source_deps
+        // Gather context from top-level class trees (JARs, etc.)
+        OPTIONAL MATCH (p)-[:CONTAINS_CLASS]->(class_child)
+        WITH p, source_deps, collect(DISTINCT class_child.entity_id) AS class_deps
         RETURN
             p.entity_id AS id,
             p.name AS name,
             p.summary AS db_summary,
-            collect(DISTINCT child.entity_id) AS dependency_ids
+            source_deps,
+            class_deps
         LIMIT 1
         """
         return self.neo4j_manager.execute_read_query(query)
@@ -64,6 +70,4 @@ class ProjectSummarizer(BaseSummarizer):
     def _get_processor_result(
         self, item: Dict[str, Any]
     ) -> Optional[Dict[str, Any]]:
-        return self.node_summary_processor.get_hierarchical_summary(
-            item, "Project"
-        )
+        return self.node_summary_processor.get_project_summary(item)

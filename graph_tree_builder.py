@@ -52,7 +52,7 @@ class GraphTreeBuilder:
         ON CREATE SET p.creationTimestamp = datetime()
         SET p.absolute_path = $projectPath
         WITH p
-        MATCH (a:Artifact)
+        MATCH (a:Artifact) WHERE a:Directory|Jar|War|Ear
         MERGE (p)-[:CONTAINS]->(a)
         """,
             params={
@@ -86,6 +86,20 @@ class GraphTreeBuilder:
             logger.warning("No directories with absolute_path found to establish hierarchy.")
             return
 
+        # Link directories to their direct SourceFile children
+        self.neo4j_manager.execute_write_query(
+            """
+            UNWIND $paths AS dir_path
+            MATCH (parentDir:Directory {absolute_path: dir_path})
+            MATCH (sf:SourceFile)
+            WHERE sf.absolute_path STARTS WITH parentDir.absolute_path + '/'
+                AND size(split(sf.absolute_path, '/')) = size(split(parentDir.absolute_path, '/')) + 1
+            MERGE (parentDir)-[:CONTAINS_SOURCE]->(sf)
+            """,
+            params={"paths": [d['path'] for d in all_dirs_with_depth]}
+        )
+
+
         dirs_by_depth = defaultdict(list)
         for item in all_dirs_with_depth:
             dirs_by_depth[item['depth']].append(item['path'])
@@ -94,19 +108,6 @@ class GraphTreeBuilder:
         for depth in sorted(dirs_by_depth.keys(), reverse=True):
             current_depth_dir_paths = dirs_by_depth[depth]
             
-            # Link directories to their direct SourceFile children
-            self.neo4j_manager.execute_write_query(
-                """
-                UNWIND $paths AS dir_path
-                MATCH (parentDir:Directory {absolute_path: dir_path})
-                MATCH (sf:SourceFile)
-                WHERE sf.absolute_path STARTS WITH parentDir.absolute_path + '/'
-                  AND size(split(sf.absolute_path, '/')) = size(split(parentDir.absolute_path, '/')) + 1
-                MERGE (parentDir)-[:CONTAINS_SOURCE]->(sf)
-                """,
-                params={"paths": current_depth_dir_paths}
-            )
-
             # Link directories to their direct Directory children
             self.neo4j_manager.execute_write_query(
                 """
@@ -115,6 +116,7 @@ class GraphTreeBuilder:
                 MATCH (childDir:Directory)
                 WHERE childDir.absolute_path STARTS WITH parentDir.absolute_path + '/'
                   AND size(split(childDir.absolute_path, '/')) = size(split(parentDir.absolute_path, '/')) + 1
+                  AND EXISTS {(childDir)-[:CONTAINS_SOURCE]->()}
                 MERGE (parentDir)-[:CONTAINS_SOURCE]->(childDir)
                 """,
                 params={"paths": current_depth_dir_paths}
@@ -127,7 +129,7 @@ class GraphTreeBuilder:
             """
             MATCH (p:Project {absolute_path: $projectPath})
             MATCH (d:Directory:Artifact)
-            WHERE EXISTS((d)-[:CONTAINS_SOURCE]->())
+            WHERE EXISTS {(d)-[:CONTAINS_SOURCE]->()}
             MERGE (p)-[:CONTAINS_SOURCE]->(d)
             """,
             params={"projectPath": str(self.project_path)}
