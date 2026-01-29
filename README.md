@@ -6,60 +6,97 @@ This enriched graph can be queried by AI agents and developers to gain deep insi
 
 ### Example Questions it Can Help With:
 
-*   "What is the primary responsibility of the `user-service` package?"
-*   "Explain the role of the `AuthenticationController` class."
+*   "What is the primary role/responsibility of the `user-service` package?"
 *   "Show me the key components in the `com.example.payment` directory."
-*   "Help me understand the workflow for processing a new order."
+*   "What is the workflow for processing a new order?"
+*   "How to refactor the payment process to improve performance?"
 
 ## Why This Project?
 
-[jQAssistant](https://jqassistant.org/) is a powerful tool for scanning compiled Java/Kotlin artifacts (`.jar`, `.class` files) and creating a structural graph of the codebase in Neo4j. However, this graph represents the bytecode, which lacks two critical elements for modern AI-driven analysis:
+[jQAssistant](https://jqassistant.org/) is a powerful tool for scanning compiled Java/Kotlin artifacts (`.jar`, `.class` files) and creating a structural graph of the classes in Neo4j. However, this graph represents the bytecode, which lacks two critical elements for modern AI-driven analysis:
 
-1.  **A direct link to the source code**: The graph knows about `com.example.UserService` as a compiled type but doesn't have a robust, queryable link to the `UserService.java` file where the developer's intent is actually expressed.
-2.  **Semantic understanding**: A structural graph can show that a method calls another, but it doesn't explain *why*. It lacks the semantic "glue" that describes the purpose and role of each component.
+1.  **No source code for analysis**: The graph knows about `com.example.UserService` as a compiled type but doesn't have a robust, queryable structure to the source code structure like `UserService.java` where the real logic is expressed.
+2.  **No semantic understanding**: A structural graph can show the dependencies between basic entities like method invocations, class inheritances, but it doesn't explain *why* and *how* the code is designed and implemented. It lacks the semantic "glue" that describes the purpose and role of each component.
 
 This project bridges that gap. It ingests a jQAssistant graph and performs a two-stage enhancement process:
 
-1.  **Graph Enrichment**: It automatically detects the project's root path from the graph, parses the source code, and creates a rich set of properties and relationships (`:SourceFile`, `absolute_path`, `entity_id`, `[:CONTAINS_SOURCE]`) to model the codebase accurately.
+1.  **Graph Enrichment**: Building on the jQAssistant graph, it parses the source code, and creates a rich set of properties and relationships to model the codebase accurately. It actually builds two overlay graphs on top of the jQAssistant graph: one for source code structure and another for class hierarchies.
 2.  **RAG Generation**: It walks the entire enriched graph in a structured, bottom-up manner, using a Large Language Model (LLM) to generate summaries for every method, type, file, directory, package, and the project itself.
 
 The result is a powerful, multi-layered knowledge graph that combines structural accuracy with deep semantic understanding, making it an ideal foundation for advanced code analysis and AI agent interaction.
 
 ## Key Features & Design Principles
 
-*   **Fully Automatic**: Auto-detects the project root from the graph, requiring no path configuration from the user.
-*   **AI-Enriched Knowledge Graph**: Transforms a structural jQAssistant graph into a rich knowledge base with AI-generated summaries at every level of abstraction.
-*   **Stable Entity Identification**: Implements a robust `entity_id` system to uniquely and stably identify every component, enabling a reliable and persistent caching mechanism.
-*   **Hierarchical, Bottom-Up Summarization**: Generates summaries in a dependency-aware order, starting from methods and building up to the project level.
-*   **Advanced Dependency Analysis**: Employs sophisticated graph traversal algorithms to respect complex hierarchies, such as processing base classes before the classes that inherit from them.
+### Graph Enrichment
+*   **Source structure overlay**: Adds a source code structure overlay to the jQAssistant graph, enabling AI agents to understand the codebase's structure and relationships.
+*   **Graph normalization**: Normlizes the graph with conventional properties and relationships such as canonical absolute paths, fully qualified names, stable IDs, etc., faciliating AI agents to query and reason about the graphRAG.
+*   **Modular & Extensible Architecture**: Built with a clean separation of concerns (Orchestrator, Normalizer, Linker, Summarizers), making the system easy to understand and maintain.
+
+### RAG Generation
+*   **Hierarchical, dependency-aware Summarization**: Generates summaries in a dependency-aware order, starting from methods and building up to the project level.
 *   **Scalable Token Management**: Intelligently handles large source files and complex components by automatically chunking context to fit within the LLM's token limits.
 *   **Incremental & Resumable Processing**: Uses a resilient caching system to track progress and avoid re-processing unchanged code, saving significant time and LLM costs on subsequent runs.
-*   **Modular & Extensible Architecture**: Built with a clean separation of concerns (Orchestrator, Normalizer, Linker, Summarizers), making the system easy to understand and maintain.
 
 ## Prerequisites
 
-*   A running Neo4j instance (v5.0+) with a graph already generated by jQAssistant.
-*   Python 3.11 or higher.
-*   Installation of required Python packages:
-    ```bash
-    pip install -r requirements.txt
-    ```
+### jQAssistant graph
+You should setup your jQAssistant graph first. Download and install jQAssistant from [here](https://jqassistant.org/). You can configure it to use embedded Neo4j (by default) or connect to an external Neo4j instance. 
 
-## Usage
+An example configuration file to specify different ports (to avoid port conflicts with your other Neo4j instances) and plugins is given below that you can copy to `~/jqassistant/jqassistant.yml`.
+```
+jqassistant:
+  store:
+    embedded:
+      # Specify the ports here
+      bolt-port: 7688 # default: 7687
+      http-port: 7777 # default: 7474
+      # Optional: listen on all interfaces (0.0.0.0) or just localhost
+      listen-address: "0.0.0.0"
+      # The neo4j apoc-core is always useful
+      neo4j-plugins:
+        - group-id: org.neo4j.procedure
+          artifact-id: apoc-core
+          classifier: core
+          version: 5.26.2
 
-The project provides two primary tools: the main enrichment script (`main.py`) and a standalone schema analyzer (`schema_analyzer.py`).
+  #analyze:
+  #  concepts:
+  #    - "java:MethodOverrides"
+```
 
-### Main Enrichment Tool (`main.py`)
 
-This is the main entry point for the project. It runs the full, two-phase process of enriching the graph and, optionally, generating the RAG summaries. The project path is detected automatically from the graph.
+**Your Java/Kotlin project should include both source code and compiled files.** Make sure you have the compiled `.class` files or `.jar` files of your project, together with the source code. jQAssistant mainly works with the compiled artifacts and generate the graph. (If your source code are built to generate class files and also produce jar files for the class files, suggest don't scan both the class files and the jar files for the same source code, as jQAssistant will generate duplicate class hierarchy nodes in the graph.)
 
-**Phase 1: Graph Enrichment (Default)**
-This phase connects source files, normalizes the graph, and creates stable `entity_id`s. It is always executed.
+**Generating the graph with jQAssistant:** After installing jQAssistant, you can generate the graph by running the following commands.
 
-**Phase 2: RAG Generation (Optional)**
-This phase generates the AI summaries. It is triggered by the `--generate-summary` flag.
+* If your source tree and compiled artifacts are in the same directory:
+   ```bash
+   jqassistant scan -f java:classpath::<path_to_project>
+   ```
+   - Note, the `java:classpath:` prefix is required by jQAssistant to indicate that the path is a classpath so that it will parse the class files inside it. (The source tree is not a classpath, but without it, jQAssistant will not parse the class files in the path.)
 
-#### Basic Usage (Enrichment Only)
+* If your source tree and compiled files are in different directories, you can specify them separately:
+   ```bash
+   jqassistant scan -f <path_to_source_tree> -f java:classpath::<path_to_build_classes> [-f java:classpath::<path_to_jar_file>]
+   ```
+
+Please refer to the [jQAssistant documentation](https://jqassistant.org/) for more information.
+
+
+### Python 3.13 or higher.
+Installation of required Python packages:
+
+```bash
+pip install -r requirements.txt
+```
+* The `google-sdk` package is for the example coding agent to run. If you don't plan to use the coding agent, you can skip this package. 
+* The `fastmcp` package is for the example mcp server to run. If you don't plan to use the mcp server, you can skip this package.
+
+## Usage (for graphRAG building)
+
+After you have a running Neo4j instance with a graph already generated by jQAssistant, you can use this tool to enrich the graph and generate RAG summaries.
+
+### Basic Usage (Graph Enrichment Only)
 
 This command will run all the graph normalization and enrichment passes without calling an LLM.
 
@@ -67,20 +104,12 @@ This command will run all the graph normalization and enrichment passes without 
 python3 main.py
 ```
 
-#### Full Usage (Enrichment + RAG Generation)
+### Full Usage (Graph Enrichment + RAG Generation)
 
 This command will perform both the enrichment and the AI summarization.
 
 ```bash
 python3 main.py --generate-summary --llm-api <your_llm_api>
-```
-
-### Schema Analysis Tool (`schema_analyzer.py`)
-
-This is a standalone utility to inspect the schema of your jQAssistant graph. It connects to the database and prints a summary of node labels and relationship types, which is useful for debugging or exploration.
-
-```bash
-python3 schema_analyzer.py
 ```
 
 ### Common Options
@@ -90,8 +119,41 @@ python3 schema_analyzer.py
 *   `--password <neo4j_password>`: Neo4j password.
 *   `--log-level <level>`: Set the console logging level (e.g., `DEBUG`, `INFO`; default: `INFO`).
 *   `--log-file <path>`: Path to a file to store logs.
-*   `--generate-summary`: **(main.py only)** Flag to enable the RAG summary generation phase.
-*   `--llm-api <api_name>`: **(main.py only)** The name of the LLM API to use for summarization (e.g., `google`, `openai`, `ollama`). Required if `--generate-summary` is used.
+*   `--generate-summary`: Flag to enable the RAG summary generation phase. By default, it is disabled.
+*   `--llm-api <api_name>`: The name of the LLM API to use for summarization (e.g., `fake`, `deepseek`, `openai`, `ollama`). Default is `fake`, with which the LLM API returns a placeholder string.
+
+## Interacting with the Graph: AI Agent
+
+Once the code graph is built and enriched, you can interact with it using natural language through an AI agent. The project provides an example implementation of an MCP tool server and an agent built with the Google Agent Development Kit (ADK) to enable this.
+
+1.  **`mcp_server.py`**: This is a tool server that exposes the Neo4j graph to an AI agent. It provides example tools like `get_graph_schema`, `execute_cypher_query`, and `get_file_source_code_by_path`, etc. They are bare minimum yet super powerful tools for AI agent to interact with the graph.
+2.  **`rag_adk_agent/`**: This directory contains an example agent built with the Google Agent Development Kit (ADK). This agent uses the tools from the MCP server to answer questions about your codebase. With an LLM API, it can do almost anything you can think of with your project, demonstrating what is possible with the tools provided.
+
+### Example Workflow
+
+1.  **Start the Tool Server**: After your jQAssistant server is running, in one terminal, start the MCP server. It will connect to Neo4j and wait for agent requests.
+    ```bash
+    python3 mcp_server.py
+    ```
+    It starts the MCP server at `http://0.0.0.0:8800/mcp`.
+
+2.  **Run the Agent**: In another terminal, run the agent. 
+
+    By default, the agent connects the MCP server at `http://127.0.0.1:8800/mcp`, and uses LLM model `deepseek/deepseek-chat` via LiteLlm package. You can change the LLM_MODEL by setting the `LLM_MODEL` variable in the `rag_adk_agent/agent.py` file. For whatever LLM model you use, you need setup its API key per request by LiteLlm package.
+
+    The recommended way is to use the ADK web UI.
+    ```bash
+    # For a web UI interaction
+    adk web
+    ```
+    Then point to the server URL in your browser (default is `http://127.0.0.1:8000`) and select the agent `rag_adk_agent`.
+    
+    Or you can run it in a command-line session.
+    ```bash
+    # For an interactive command-line session
+    adk run rag_adk_agent
+    ```
+    You can now ask the agent questions.
 
 ## Documentation
 

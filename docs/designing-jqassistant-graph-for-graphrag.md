@@ -115,7 +115,7 @@ This new phase builds a second, parallel hierarchy for the project's compiled cl
 #### **4b. Establish Direct Class Hierarchy**
 
 -   **Purpose:** To create a clean, traversable hierarchy for the package and class structure.
--   **Process:** Creates `[:CONTAINS_CLASS]` relationships to form a tree from the `:Project` node down through `:ClassTree` and `:Package` nodes to `:Type` nodes. This is also done level-by-level from the bottom up.
+-   **Process:** This pass iterates through each identified `:ClassTree` root. Within each tree, it uses a bottom-up, level-by-level approach to create `[:CONTAINS_CLASS]` relationships. Crucially, it uses the existing `[:CONTAINS]` relationship as a guardrail to ensure that links are only created between nodes that belong to the same artifact, preventing incorrect relationships between different JARs that share common package paths (e.g., `org.apache`).
 -   **Output:** A second, browsable hierarchy parallel to the source tree, representing the project's compiled and dependency structure.
 
 ---

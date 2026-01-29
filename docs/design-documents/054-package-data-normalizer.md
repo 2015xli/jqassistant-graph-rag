@@ -28,9 +28,9 @@ The normalizer executes its passes in a specific, dependency-aware order.
 
 ### Pass: `establish_class_hierarchy()`
 
--   **What**: Builds the clean, parent-child `[:CONTAINS_CLASS]` relationship overlay.
--   **How**: Using a bottom-up, level-by-level approach, it traverses all nodes within all `:ClassTree` containers (both JARs and validated directories) and creates `[:CONTAINS_CLASS]` relationships between parent packages and their direct children (sub-packages and `:Type` files).
--   **Rationale**: This creates a clean, unambiguous hierarchy for the `PackageSummarizer` to traverse, mirroring the logic of the `[:CONTAINS_SOURCE]` tree.
+-   **What**: Builds the clean, parent-child `[:CONTAINS_CLASS]` relationship overlay, ensuring artifact boundaries are respected.
+-   **How**: This pass iterates through each `:ClassTree` node individually. For each tree, it performs a bottom-up traversal, creating `[:CONTAINS_CLASS]` relationships between parent directories and their direct children (sub-directories and `:Type` files). To prevent incorrect links between different artifacts that might share package names (e.g., two JARs both containing `org.apache`), the query uses the existing, reliable `[:CONTAINS]` relationship as a guardrail, ensuring a parent and child are part of the same original artifact before linking them.
+-   **Rationale**: This robust, per-artifact approach prevents the "cross-boundary" problem and guarantees that the resulting `[:CONTAINS_CLASS]` hierarchy is a true and accurate representation of each individual component's structure. It mirrors the logic of the `[:CONTAINS_SOURCE]` tree.
 
 ### Pass: `cleanup_fqn_properties()`
 
