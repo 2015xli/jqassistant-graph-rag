@@ -225,19 +225,19 @@ class PackageDataNormalizer:
         )
 
 
-    def cleanup_fqn_properties(self):
+    def cleanup_package_semantics(self):
         """
         Removes the 'fqn' property from any directory that is not a valid
         package, including the ClassTree roots themselves.
         """
         logger.info("--- Starting Pass: Cleanup FQN Properties ---")
         query = """
-        MATCH (d:Directory)
-        WHERE d.fqn IS NOT NULL AND NOT ()-[:CONTAINS_CLASS]->(d)
-        REMOVE d.fqn
+        MATCH (d:Directory:Package)
+        WHERE NOT ()-[:CONTAINS_CLASS]->(d)
+        REMOVE d.fqn, d:Package
         """
         self.neo4j_manager.execute_write_query(query)
-        logger.info("Removed 'fqn' from non-package directories and ClassTree roots.")
+        logger.info("Removed 'fqn' and :Package label from non-package directories and ClassTree roots.")
         logger.info("--- Finished Pass: Cleanup FQN Properties ---")
 
     def link_project_to_class_trees(self):

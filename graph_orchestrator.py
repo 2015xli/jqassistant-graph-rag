@@ -56,7 +56,7 @@ class GraphOrchestrator:
         package_normalizer.label_jar_artifacts_as_class_trees()
         package_normalizer.normalize_directory_packages()
         package_normalizer.establish_class_hierarchy()
-        package_normalizer.cleanup_fqn_properties()
+        package_normalizer.cleanup_package_semantics()
         package_normalizer.link_project_to_class_trees()
 
         # --- Phase 5: Entity and ID Generation ---

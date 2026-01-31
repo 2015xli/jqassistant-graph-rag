@@ -32,7 +32,7 @@ The normalizer executes its passes in a specific, dependency-aware order.
 -   **How**: This pass iterates through each `:ClassTree` node individually. For each tree, it performs a bottom-up traversal, creating `[:CONTAINS_CLASS]` relationships between parent directories and their direct children (sub-directories and `:Type` files). To prevent incorrect links between different artifacts that might share package names (e.g., two JARs both containing `org.apache`), the query uses the existing, reliable `[:CONTAINS]` relationship as a guardrail, ensuring a parent and child are part of the same original artifact before linking them.
 -   **Rationale**: This robust, per-artifact approach prevents the "cross-boundary" problem and guarantees that the resulting `[:CONTAINS_CLASS]` hierarchy is a true and accurate representation of each individual component's structure. It mirrors the logic of the `[:CONTAINS_SOURCE]` tree.
 
-### Pass: `cleanup_fqn_properties()`
+### Pass: `cleanup_package_semantics()`
 
 -   **What**: Removes the `fqn` property from all directories that are not part of a validated package structure.
 -   **How**: It runs a single Cypher query that finds any `:Directory` with an `fqn` that does *not* have an incoming `[:CONTAINS_CLASS]` relationship and removes the property.
