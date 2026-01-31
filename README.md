@@ -31,7 +31,7 @@ This enriched graph can be queried by AI agents and developers to gain deep insi
 [jQAssistant](https://jqassistant.org/) is a powerful tool for scanning compiled Java/Kotlin artifacts (`.jar`, `.class` files) and creating a structural graph of the classes in Neo4j. However, this graph represents the bytecode, which lacks two critical elements for modern AI-driven analysis:
 
 1.  **No source code for analysis**: The graph knows about `com.example.UserService` as a compiled type but doesn't have a robust, queryable structure to the source code structure like `UserService.java` where the real logic is expressed.
-2.  **No semantic understanding**: A structural graph can show the dependencies between basic entities like method invocations, class inheritances, but it doesn't explain *why* and *how* the code is designed and implemented. It lacks the semantic "glue" that describes the purpose and role of each component.
+2.  **No code semantic understanding**: A structural graph can show the dependencies between basic entities like method invocations, class inheritances, but it doesn't explain *why* and *how* the code is designed and implemented. It lacks the semantic "glue" that describes the purpose and role of each component.
 
 This project bridges that gap. It ingests a jQAssistant graph and performs a two-stage enhancement process:
 
@@ -80,7 +80,7 @@ jqassistant:
 ```
 
 
-**Your Java/Kotlin project should include both source code and compiled files.** Make sure you have the compiled `.class` files or `.jar` files of your project, together with the source code. jQAssistant mainly works with the compiled artifacts and generate the graph. (If your source code are built to generate class files and also produce jar files for the class files, suggest don't scan both the class files and the jar files for the same source code, as jQAssistant will generate duplicate class hierarchy nodes in the graph.)
+**Your Java/Kotlin project should include both source code and compiled files.** Make sure you have the compiled `.class` files or `.jar` files of your project, together with the source code. jQAssistant mainly works with the compiled artifacts and generate the graph based on them. (If your source code are built to generate class files and also produce jar files for the class files, suggest don't include both the class files and the jar files from the same source code, as jQAssistant will generate duplicate class hierarchy nodes in the graph.)
 
 **Generating the graph with jQAssistant:** After installing jQAssistant, you can generate the graph by running the following commands.
 
