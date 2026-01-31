@@ -88,7 +88,7 @@ jqassistant:
    ```bash
    jqassistant scan -f java:classpath::<path_to_project>
    ```
-   - Note, the `java:classpath:` prefix is required by jQAssistant to indicate that the path is a classpath so that it will parse the class files inside it. (The source tree is not a classpath, but without it, jQAssistant will not parse the class files in the path.)
+   - Note, the `java:classpath:` prefix is required by jQAssistant to indicate that the path is a classpath so that it will parse the class files inside it. (The source tree is not a classpath, but without it, jQAssistant will not parse the class files under the path.)
 
 * If your source tree and compiled class/jar files have different paths, you can specify them separately:
    ```bash
@@ -168,4 +168,4 @@ Once the code graph is built and enriched, you can interact with it using natura
 
 ## Documentation
 
-For a deep dive into the project's architecture, component responsibilities, and the logic behind the hierarchical processing and iterative summarization, please refer to the comprehensive documentation in the [docs/ directory](./docs/README.md).
+For a deep dive into the project's architecture, component responsibilities, and the logic behind the hierarchical processing and iterative summarization, please refer to the comprehensive documentation in the [docs/](./docs/README.md) directory.
