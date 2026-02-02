@@ -4,7 +4,7 @@ from graph_basic_normalizer import GraphBasicNormalizer
 from source_file_linker import SourceFileLinker
 from graph_tree_builder import GraphTreeBuilder
 from graph_entity_setter import GraphEntitySetter
-from package_data_normalizer import PackageDataNormalizer
+from artifact_data_normalizer import ArtifactDataNormalizer
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +30,7 @@ class GraphOrchestrator:
         basic_normalizer = GraphBasicNormalizer(self.neo4j_manager)
         source_linker = SourceFileLinker(self.neo4j_manager)
         tree_builder = GraphTreeBuilder(self.neo4j_manager)
-        package_normalizer = PackageDataNormalizer(self.neo4j_manager)
+        artifact_normalizer = ArtifactDataNormalizer(self.neo4j_manager)
         entity_setter = GraphEntitySetter(self.neo4j_manager)
 
         # --- Phase 1: Basic Normalization ---
@@ -51,13 +51,13 @@ class GraphOrchestrator:
         self.project_path = tree_builder.create_project_node()
         tree_builder.establish_source_hierarchy()
 
-        # --- Phase 4: Package Data Normalization ---
-        # Identify and normalize package structures.
-        package_normalizer.label_jar_artifacts_as_class_trees()
-        package_normalizer.normalize_directory_packages()
-        package_normalizer.establish_class_hierarchy()
-        package_normalizer.cleanup_package_semantics()
-        package_normalizer.link_project_to_class_trees()
+        # --- Phase 4: Artifact & Package Data Normalization ---
+        # Correct the core artifact structure and build the class hierarchy overlay.
+        artifact_normalizer.relocate_directory_artifacts()
+        artifact_normalizer.rewrite_containment_relationships()
+        artifact_normalizer.establish_class_hierarchy()
+        artifact_normalizer.cleanup_package_semantics()
+        artifact_normalizer.link_project_to_artifacts()
 
         # --- Phase 5: Entity and ID Generation ---
         # As the final step, label all relevant nodes as :Entity and generate

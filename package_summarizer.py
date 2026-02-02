@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 class PackageSummarizer(BaseSummarizer):
     """
-    Generates summaries for :Package and :ClassTree nodes in a hierarchical,
+    Generates summaries for :Package and :Artifact nodes in a hierarchical,
     bottom-up manner using the [:CONTAINS_CLASS] relationship.
     """
 
@@ -25,17 +25,15 @@ class PackageSummarizer(BaseSummarizer):
         """
         Executes the package summarization pass in two phases:
         1. Summarize internal packages from the bottom up.
-        2. Summarize the ClassTree roots themselves.
+        2. Summarize the Artifact roots themselves.
         """
         logger.info(f"--- Starting Pass: {self.__class__.__name__} ---")
         total_updated_count = 0
 
-        # Phase 1: Summarize internal packages
         updated_in_phase1 = self._summarize_internal_packages()
         total_updated_count += updated_in_phase1
 
-        # Phase 2: Summarize ClassTree roots
-        updated_in_phase2 = self._summarize_class_tree_roots()
+        updated_in_phase2 = self._summarize_artifact_roots()
         total_updated_count += updated_in_phase2
 
         logger.info(
@@ -45,10 +43,10 @@ class PackageSummarizer(BaseSummarizer):
         return total_updated_count
 
     def _summarize_internal_packages(self) -> int:
-        """Processes all :Package nodes within :ClassTree containers."""
+        """Processes all :Package nodes within :Artifact containers."""
         logger.info("Phase 1: Summarizing internal packages.")
         query = """
-        MATCH (ct:ClassTree)-[:CONTAINS_CLASS*]->(p:Package)
+        MATCH (a:Artifact)-[:CONTAINS_CLASS*]->(p:Package)
         WHERE p.fqn IS NOT NULL AND p.summary IS NULL
         WITH p, size(split(p.fqn, '.')) AS depth
         OPTIONAL MATCH (p)-[:CONTAINS_CLASS]->(child)
@@ -67,7 +65,6 @@ class PackageSummarizer(BaseSummarizer):
             logger.info("No internal packages to summarize.")
             return 0
 
-        # Group by depth to process bottom-up
         items_by_depth = defaultdict(list)
         for item in items_to_process:
             items_by_depth[item['depth']].append(item)
@@ -80,24 +77,24 @@ class PackageSummarizer(BaseSummarizer):
         
         return updated_count
 
-    def _summarize_class_tree_roots(self) -> int:
-        """Processes the root :ClassTree nodes."""
-        logger.info("Phase 2: Summarizing ClassTree roots.")
+    def _summarize_artifact_roots(self) -> int:
+        """Processes the root :Artifact nodes."""
+        logger.info("Phase 2: Summarizing Artifact roots.")
         query = """
-        MATCH (ct:ClassTree)
-        WHERE ct.summary IS NULL
-        OPTIONAL MATCH (ct)-[:CONTAINS_CLASS]->(child)
+        MATCH (a:Artifact)
+        WHERE a.summary IS NULL
+        OPTIONAL MATCH (a)-[:CONTAINS_CLASS]->(child)
         WHERE child:Package OR child:Type
         RETURN
-            ct.entity_id AS id,
-            ct.fileName AS path,
-            ct.summary AS db_summary,
+            a.entity_id AS id,
+            a.fileName AS path,
+            a.summary AS db_summary,
             collect(DISTINCT child.entity_id) AS dependency_ids
         """
         items_to_process = self.neo4j_manager.execute_read_query(query)
 
         if not items_to_process:
-            logger.info("No ClassTree roots to summarize.")
+            logger.info("No Artifact roots to summarize.")
             return 0
         
         return self.process_batch(items_to_process)

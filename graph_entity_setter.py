@@ -37,7 +37,20 @@ class GraphEntitySetter:
         )
         logger.info("Generated entity_id for :Project node.")
 
-        # 3. Generate entity_id for :Artifact
+        # 3. (NEW) Generate entity_id for source tree nodes not part of any artifact
+        self.neo4j_manager.execute_write_query(
+            """
+            MATCH (demotedRoot:Directory)
+            WHERE demotedRoot.fileName = demotedRoot.absolute_path AND NOT demotedRoot:Artifact
+            MATCH (descendant:File)
+            WHERE descendant.absolute_path STARTS WITH demotedRoot.absolute_path
+              AND NOT EXISTS { (:Artifact)-[:CONTAINS]->(descendant) }
+            SET descendant:Entity, descendant.entity_id = apoc.util.md5([demotedRoot.fileName, descendant.fileName])
+            """
+        )
+        logger.info("Generated entity_id for source tree nodes.")
+
+        # 4. Generate entity_id for :Artifact
         self.neo4j_manager.execute_write_query(
             """
             MATCH (a:Artifact)
@@ -47,7 +60,7 @@ class GraphEntitySetter:
         )
         logger.info("Generated entity_id for :Artifact nodes.")
 
-        # 4. Generate entity_id for file-system-like nodes
+        # 5. Generate entity_id for file-system-like nodes WITHIN artifacts
         self.neo4j_manager.execute_write_query(
             """
             MATCH (a:Artifact)-[:CONTAINS]->(n)
@@ -56,9 +69,9 @@ class GraphEntitySetter:
             SET n:Entity, n.entity_id = apoc.util.md5([a.fileName, n.fileName])
             """
         )
-        logger.info("Generated entity_id for file-system-like nodes.")
+        logger.info("Generated entity_id for file-system-like nodes within artifacts.")
 
-        # 5. Generate entity_id for :Member nodes
+        # 6. Generate entity_id for :Member nodes
         self.neo4j_manager.execute_write_query(
             """
             MATCH (a:Artifact)-[:CONTAINS]->(t:Type)-[:DECLARES]->(m:Member)

@@ -88,11 +88,11 @@ jqassistant:
    ```bash
    jqassistant scan -f java:classpath::<path_to_project>
    ```
-   - Note, the `java:classpath:` prefix is required by jQAssistant to indicate that the path is a classpath so that it will parse the class files inside it. (The source tree is not a classpath, but without it, jQAssistant will not parse the class files under the path.)
+   - Note, the `java:classpath:` prefix is required by jQAssistant to indicate that the path is a classpath so that it will parse the class files inside it. (The source tree is not a classpath, but without it, jQAssistant will not parse the class files under the path.) To be safe, please always use the prefix for all your scanned paths.
 
 * If your source tree and compiled class/jar files have different paths, you can specify them separately:
    ```bash
-   jqassistant scan -f <path_to_source_tree> -f java:classpath::<path_to_build_classes> [-f java:classpath::<path_to_jar_file>]
+   jqassistant scan -f java:classpath::<path_to_source_tree> -f java:classpath::<path_to_build_classes> [-f java:classpath::<path_to_jar_file>]
    ```
 
 Please refer to the [jQAssistant documentation](https://jqassistant.org/) for more information.

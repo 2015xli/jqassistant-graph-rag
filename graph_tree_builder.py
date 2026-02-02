@@ -26,41 +26,41 @@ class GraphTreeBuilder:
         """
         logger.info("--- Starting Pass: Create Project Node ---")
         
-        # 1. Auto-detect project root from the graph
+        # Auto-detect project root from the graph. Get the top level directory nodes.
+        # The top level directory nodes can be :Artifact or not, while mostly not.
+        # Top level directory nodes should always have absolute path in fileName.
         query = """
-        MATCH (a:Artifact:Directory)
-        WHERE a.fileName IS NOT NULL
-        RETURN a.fileName AS path
+        MATCH (d:Directory)
+        WHERE NOT EXISTS { (parent_dir:Directory)-[:CONTAINS]->(d) }
+        RETURN d.absolute_path AS path
         """
         results = self.neo4j_manager.execute_read_query(query)
-        artifact_paths = [res["path"] for res in results if res and res.get("path")]
-        if not artifact_paths:
-            raise ValueError(
-                "Could not auto-detect project path. No directory-based :Artifact "
-                "nodes with 'fileName' property found in the graph."
-            )
+        top_dir_paths = [res["path"] for res in results if res and res.get("path")]
         
-        project_path_str = os.path.commonpath(artifact_paths)
+        project_path_str = os.path.commonpath(top_dir_paths)
         self.project_path = Path(project_path_str).resolve()
         self.project_name = self.project_path.name
         logger.info(f"Auto-detected project path: {self.project_path}")
 
         # 2. Create :Project node and link artifacts
-        self.neo4j_manager.execute_write_query(
-            """
-        MERGE (p:Project {name: $projectName})
-        ON CREATE SET p.creationTimestamp = datetime()
-        SET p.absolute_path = $projectPath
-        WITH p
-        MATCH (a:Artifact) WHERE a:Directory|Jar|War|Ear
-        MERGE (p)-[:CONTAINS]->(a)
-        """,
+        self.neo4j_manager.execute_write_query("""
+            MERGE (p:Project {name: $projectName})
+            ON CREATE SET p.creationTimestamp = datetime()
+            SET p.absolute_path = $projectPath
+            WITH p
+            MATCH (a:Artifact) 
+            MERGE (p)-[:CONTAINS]->(a)
+            WITH p
+            MATCH (d:Directory)
+            WHERE NOT EXISTS { (parent_dir:Directory)-[:CONTAINS]->(d) }
+            MERGE (p)-[:CONTAINS]->(d)
+            """,
             params={
                 "projectName": self.project_name,
                 "projectPath": str(self.project_path),
             },
         )
-        logger.info(f"Created :Project node for '{self.project_name}' and linked artifacts.")
+        logger.info(f"Created :Project node for '{self.project_name}' and linked with artifacts and top-level directories.")
         logger.info("--- Finished Pass: Create Project Node ---")
         return self.project_path
 
@@ -124,12 +124,13 @@ class GraphTreeBuilder:
 
         logger.info("Established [:CONTAINS_SOURCE] relationships between directories and source files.")
 
-        # 3. Link Project node to top-level artifact directories
+        # 3. Link Project node to top-level directories
         self.neo4j_manager.execute_write_query(
             """
             MATCH (p:Project {absolute_path: $projectPath})
-            MATCH (d:Directory:Artifact)
+            MATCH (d:Directory)
             WHERE EXISTS {(d)-[:CONTAINS_SOURCE]->()}
+            AND NOT EXISTS {(parent_dir:Directory)-[:CONTAINS]->(d)}
             MERGE (p)-[:CONTAINS_SOURCE]->(d)
             """,
             params={"projectPath": str(self.project_path)}
