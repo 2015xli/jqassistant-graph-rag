@@ -31,7 +31,7 @@ The system operates as a multi-stage pipeline that progressively enriches the in
 -   **`GraphBasicNormalizer`:** The first handler, responsible for adding canonical `absolute_path` properties and labeling `:SourceFile` nodes.
 -   **`SourceFileLinker`:** The second handler, responsible for parsing source files (identified by the normalizer) and creating `[:WITH_SOURCE]` links from types and members to their source files.
 -   **`GraphTreeBuilder`:** The third handler, which creates the root `:Project` node and builds the clean `[:CONTAINS_SOURCE]` source code hierarchy.
--   **`PackageDataNormalizer`:** A critical handler that validates package structures from compiled class files, corrects `fqn` properties, and builds a second clean hierarchy for packages using the `[:CONTAINS_CLASS]` relationship.
+-   **`ArtifactDataNormalizer`:** A critical handler that fundamentally corrects the graph structure by relocating misplaced `:Artifact` labels, rewriting the core `[:CONTAINS]` relationships, and then building the clean `[:CONTAINS_CLASS]` hierarchy overlay.
 -   **`GraphEntitySetter`:** The final handler, responsible for applying the `:Entity` label and generating the stable `entity_id` for all relevant nodes.
 
 ## 3. The Enrichment Pipeline: A Detailed Pass Design

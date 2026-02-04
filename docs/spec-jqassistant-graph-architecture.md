@@ -90,11 +90,22 @@ Our project adds a semantic layer to the graph. This is done through a series of
 - To resolve the ambiguity of `:File` label on all kinds of `:Directory`, `:Package`, `:Type`, and `:File` nodes, we introduce a dedicated `:SourceFile` label for all `.java` and `.kt` source files. This clearly distinguishes them from other nodes with the `:File` label.
 
 ### The `[:CONTAINS_SOURCE]` Relationship
-- To bypass the problematic `[:CONTAINS]` relationship, we create our own clean, direct, parent-child hierarchy using `[:CONTAINS_SOURCE]` for the directory tree related to source files. This allows AI agent to traverse the source code's directory structure and conduct intellegent analysis.
+- To bypass the problematic `[:CONTAINS]` relationship, we create our own clean, direct, parent-child hierarchy using `[:CONTAINS_SOURCE]` for the directory tree related to source files. This allows an AI agent to traverse the source code's directory structure and conduct intelligent analysis.
 
+### Correcting the Core Artifact Structure
+- **Problem**: When jQAssistant scans a directory that is not a pure classpath root (e.g., a full project directory containing source and build outputs), it incorrectly labels the top-level scanned directory as the `:Artifact`. The true artifacts (e.g., `target/classes` or JAR files) are nested inside. This misplaces the artifact boundary and leads to incorrect `[:CONTAINS]` and `[:REQUIRES]` relationships at the top level.
+- **Solution**: We perform a fundamental refactoring of the core graph structure.
+    1.  **Merge Duplicates**: First, we merge duplicate "phantom" `:Type` and `:Member` nodes created by `[:REQUIRES]` relationships into their "real" `[:CONTAINS]` counterparts.
+    2.  **Relocate Artifacts**: We use an intelligent "validate-first" heuristic. For each `:Directory:Artifact`, we check if its internal package structure is consistent with the `fqn` of its contained classes. If not, we demote the incorrect top-level node (by removing its `:Artifact` label) and promote the correct sub-directories (e.g., `target/classes`) to be the new, true `:Artifact` nodes.
+    3.  **Rewrite Relationships**: After relocating the `:Artifact` labels, we surgically rewrite the `[:CONTAINS]` and `[:REQUIRES]` relationships. We create the correct transitive links from the new artifacts to their contents and delete the old, incorrect links from the demoted nodes. This makes the graph consistent with a perfect scan.
+
+### The `:ClassTree` Label and `[:CONTAINS_CLASS]` Relationship
+- In parallel to the source hierarchy, we create a second clean hierarchy for the compiled code and package structure.
+- We introduce a `:ClassTree` label to identify the root of a valid package hierarchy (either a `:Jar:Artifact` or a validated directory structure).
+- We then build a clean, parent-child overlay using the `[:CONTAINS_CLASS]` relationship. This connects the `:Project` to `:ClassTree` nodes, and `:ClassTree` nodes down through `:Package` nodes to `:Type` nodes. This allows an agent to easily traverse the logical package structure.
 
 ### The `fqn` Property Normalization
-- **Problem**: As described in FQN-Rule-2, jQAssistant incorrectly assigns an `fqn` property to `:Directory` nodes within a `:Directory:Artifact` by simply replacing slashes in the `fileName` with dots. This is often semantically incorrect, as a source directory structure does not always map to a package structure.
+- **Problem**: As described in FQN-Rule-2, jQAssistant incorrectly assigns an `fqn` property to `:Directory` nodes within a `:Directory:Artifact` by simply replacing slashes in the `fileName` with dots. This is often semantically incorrect.
 - **Solution**: We implement a sophisticated "anchor and validate" heuristic.
     1.  We find a deeply nested `:Class` file within the artifact, as it is most likely to reveal the full package path.
     2.  We use this class's correct, bytecode-derived `fqn` as a ground truth to infer the expected package directory structure.

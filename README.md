@@ -80,7 +80,7 @@ jqassistant:
 ```
 
 
-**Your Java/Kotlin project should include both source code and compiled files.** Make sure you have the compiled `.class` files or `.jar` files of your project, together with the source code. jQAssistant mainly works with the compiled artifacts and generate the graph based on them. (If your source code are built to generate class files and also produce jar files for the class files, suggest don't include both the class files and the jar files from the same source code, as jQAssistant will generate duplicate class hierarchy nodes in the graph.)
+**Your Java/Kotlin project should include both source code and compiled files.** Make sure you have the compiled `.class` files or `.jar` files of your project, and the source code. jQAssistant mainly works with the compiled artifacts and generate the graph based on them. (If your source code are built to generate class files and also produce jar files for the same class files, suggest don't include both the class files and the jar files from the same source code, as jQAssistant will generate duplicate class hierarchy nodes in the graph.)
 
 **Generating the graph with jQAssistant:** After installing jQAssistant, you can generate the graph by running the following commands.
 
@@ -88,11 +88,11 @@ jqassistant:
    ```bash
    jqassistant scan -f java:classpath::<path_to_project>
    ```
-   - Note, the `java:classpath:` prefix is required by jQAssistant to indicate that the path is a classpath so that it will parse the class files inside it. (The source tree is not a classpath, but without it, jQAssistant will not parse the class files under the path.) To be safe, please always use the prefix for all your scanned paths.
+   - Note, the `java:classpath:` prefix is required by jQAssistant to indicate that the path is a classpath so that it will parse the class files inside it. (The source tree is not a classpath, but without it, jQAssistant will not parse the class files under the path.) To be safe, please always use the prefix, unless you provide the source tree and the build tree separately like below.
 
 * If your source tree and compiled class/jar files have different paths, you can specify them separately:
    ```bash
-   jqassistant scan -f java:classpath::<path_to_source_tree> -f java:classpath::<path_to_build_classes> [-f java:classpath::<path_to_jar_file>]
+   jqassistant scan -f <path_to_source_tree> -f java:classpath::<path_to_build_classes> [-f java:classpath::<path_to_jar_file>]
    ```
 
 Please refer to the [jQAssistant documentation](https://jqassistant.org/) for more information.

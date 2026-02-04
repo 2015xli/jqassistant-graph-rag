@@ -48,7 +48,7 @@ class GraphTreeBuilder:
             ON CREATE SET p.creationTimestamp = datetime()
             SET p.absolute_path = $projectPath
             WITH p
-            MATCH (a:Artifact) 
+            MATCH (a:Artifact) WHERE a:Directory|Jar 
             MERGE (p)-[:CONTAINS]->(a)
             WITH p
             MATCH (d:Directory)

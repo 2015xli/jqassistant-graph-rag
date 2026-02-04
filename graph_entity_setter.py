@@ -44,7 +44,7 @@ class GraphEntitySetter:
             WHERE demotedRoot.fileName = demotedRoot.absolute_path AND NOT demotedRoot:Artifact
             MATCH (descendant:File)
             WHERE descendant.absolute_path STARTS WITH demotedRoot.absolute_path
-              AND NOT EXISTS { (:Artifact)-[:CONTAINS]->(descendant) }
+              AND NOT EXISTS { (:Artifact)-[:CONTAINS]->(descendant) }  //Artifact CONTAINS all descendant nodes
             SET descendant:Entity, descendant.entity_id = apoc.util.md5([demotedRoot.fileName, descendant.fileName])
             """
         )
@@ -64,7 +64,7 @@ class GraphEntitySetter:
         self.neo4j_manager.execute_write_query(
             """
             MATCH (a:Artifact)-[:CONTAINS]->(n)
-            WHERE (n:File OR n:Directory OR n:Package OR n:Type)
+            WHERE (n:File OR n:Directory)
             AND n.fileName IS NOT NULL AND a.fileName IS NOT NULL
             SET n:Entity, n.entity_id = apoc.util.md5([a.fileName, n.fileName])
             """

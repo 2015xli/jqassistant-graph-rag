@@ -53,8 +53,10 @@ class GraphOrchestrator:
 
         # --- Phase 4: Artifact & Package Data Normalization ---
         # Correct the core artifact structure and build the class hierarchy overlay.
+        artifact_normalizer.merge_duplicate_types()
         artifact_normalizer.relocate_directory_artifacts()
         artifact_normalizer.rewrite_containment_relationships()
+        artifact_normalizer.rewrite_requirement_relationships()
         artifact_normalizer.establish_class_hierarchy()
         artifact_normalizer.cleanup_package_semantics()
         artifact_normalizer.link_project_to_artifacts()
