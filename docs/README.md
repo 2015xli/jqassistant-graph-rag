@@ -29,8 +29,8 @@ The graph processing pipeline is broken down into modular components, each respo
 -   **[040-source-file-linker.md](design-documents/040-source-file-linker.md)**: Design document for the `SourceFileLinker`, which links graph nodes to their corresponding source files.
 -   **[051-graph-basic-normalizer.md](design-documents/051-graph-basic-normalizer.md)**: Design document for the `GraphBasicNormalizer`, which adds canonical absolute paths and labels source files.
 -   **[052-graph-tree-builder.md](design-documents/052-graph-tree-builder.md)**: Design document for the `GraphTreeBuilder`, which establishes the project's hierarchical structure.
--   **[053-graph-entity-setter.md](design-documents/053-graph-entity-setter.md)**: Design document for the `GraphEntitySetter`, which creates stable IDs and labels all queryable entities.
--   **[054-artifact-data-normalizer.md](design-documents/054-artifact-data-normalizer.md)**: Design document for the `ArtifactDataNormalizer`, which corrects the core artifact structure and builds the class hierarchy.
+-   **[055-artifact-data-normalizer.md](design-documents/055-artifact-data-normalizer.md)**: Design document for the `ArtifactDataNormalizer`, which corrects the core artifact structure and builds the class hierarchy.
+-   **[057-graph-entity-setter.md](design-documents/057-graph-entity-setter.md)**: Design document for the `GraphEntitySetter`, which creates stable IDs and labels all queryable entities.
 
 ### Graph summarization and embedding
 The graph summarization and embedding has sophisticated design. Especially, it partitions the summarization work into multiple layers and passes. 
